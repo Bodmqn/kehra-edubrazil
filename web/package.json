@@ -13,6 +13,7 @@
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/list": "^6.1.21",
     "@fullcalendar/react": "^6.1.21",
+    "@netlify/next": "^1.4.9",
     "@supabase/supabase-js": "^2.110.7",
     "@types/leaflet": "^1.9.21",
     "@types/papaparse": "^5.5.2",
