@@ -31,6 +31,7 @@ export interface UniversityDetail {
   about_text: string | null
   history: string | null
   website_description: string | null
+  wikipedia_url: string | null
   scraped_at: string | null
 }
 

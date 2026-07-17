@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { universities } from '@/lib/data'
+import { universities as localUniversities } from '@/lib/data'
 import { slugify } from '@/lib/utils'
 import { getMockPrograms } from '@/lib/mock-programs'
+import { useUniversities, usePrograms, useUniversityDetails } from '@/lib/useSupabaseData'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import SearchInput from '@/components/SearchInput'
@@ -29,13 +30,21 @@ interface UniversityDetailProps {
 }
 
 export default function UniversityDetail({ slug }: UniversityDetailProps) {
-  const university = universities.find((u) => slugify(u.name) === slug)
+  const { universities: liveUniversities } = useUniversities()
+  const university = liveUniversities.find((u) => slugify(u.name) === slug)
+  const { programs: livePrograms, loading: programsLoading } = usePrograms(university?.id ?? null)
+  const { details } = useUniversityDetails(university?.id ?? null)
   const [activeTab, setActiveTab] = useState('programs')
   const [programSearch, setProgramSearch] = useState('')
   const [levelFilter, setLevelFilter] = useState<'all' | 'Mestrado' | 'Doutorado'>('all')
   const [showOpenOnly, setShowOpenOnly] = useState(true)
 
-  const programs = university ? getMockPrograms(university.acronym, university.id) : []
+  const programs =
+    livePrograms.length > 0
+      ? livePrograms
+      : university
+        ? getMockPrograms(university.acronym, university.id)
+        : []
 
   const filteredPrograms = useMemo(() => {
     return programs.filter((p) => {
@@ -189,11 +198,22 @@ export default function UniversityDetail({ slug }: UniversityDetailProps) {
               <div>
                 <h3 className="mb-2 text-lg font-semibold text-white">About {university.name}</h3>
                 <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                  {university.name} ({university.acronym}) is a {university.type.toLowerCase()} university
-                  located in {university.state}, {university.region} region of Brazil. It offers
+                  {details?.about_text ||
+                    `${university.name} (${university.acronym}) is a ${university.type.toLowerCase()} university
+                  located in ${university.state}, ${university.region} region of Brazil. It offers
                   graduate programs at the Masters (Mestrado) and PhD (Doutorado) levels through its various
-                  departments and research centers.
+                  departments and research centers.`}
                 </p>
+                {details?.wikipedia_url && (
+                  <a
+                    href={details.wikipedia_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-[var(--bg-primary)] hover:underline"
+                  >
+                    Source: Wikipedia ↗
+                  </a>
+                )}
               </div>
 
               <div>

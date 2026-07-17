@@ -5,9 +5,10 @@ import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import SearchInput from '@/components/SearchInput'
 import UniversityCard from '@/components/UniversityCard'
-import { universities } from '@/lib/data'
+import { useUniversities } from '@/lib/useSupabaseData'
 
 export default function UniversitiesPage() {
+  const { universities, loading } = useUniversities()
   const [search, setSearch] = useState('')
   const [selectedRegions, setSelectedRegions] = useState<Region[]>([])
   const [selectedTypes, setSelectedTypes] = useState<UniversityType[]>([])
