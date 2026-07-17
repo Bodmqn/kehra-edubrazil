@@ -1,0 +1,110 @@
+SNO,Name,Acronym,Region,State,Type,SigaaUrl/Edital,School URL
+1,Universidade Estadual de Roraima,UERR,Norte,Roraima,State,Edital - UERR Univesity of Roraima,https://uerr.edu.br/
+2,Universidade Estadual do Tocantins,UNITINS,Norte,Tocantins,State,https://www.unitins.br/concursos/publico,https://www.unitins.br/
+3,Universidade Federal Rural da Amazônia,UFRA,Norte,Pará,Federal,https://sigaa.ufra.edu.br/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-stricto,https://www.ufra.edu.br/
+4,Universidade Federal de Rondônia,UNIR,Norte,Rondônia,Federal,https://sigaa.unir.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.unir.br/
+5,Universidade Federal de Roraima,UFRR,Norte,Roraima,Federal,https://sigaa.ufrr.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufrr.br/
+6,Universidade Federal do Acre,UFAC,Norte,Acre,Federal,https://www.ufac.br/site/ufac/propeg/mestrados-e-doutorados,https://www.ufac.br/
+7,Universidade Federal do Amapá,UNIFAP,Norte,Amapá,Federal,https://sigaa.unifap.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.unifap.br/
+8,Universidade Federal do Amazonas,UFAM,Norte,Amazonas,Federal,https://ppgee.ufam.edu.br/editais-de-selecao.html,https://www.ufam.edu.br/
+9,Universidade Federal do Norte do Tocantins,UFNT,Norte,Tocantins,Federal,https://sistemas.ufnt.edu.br/seletivos,https://ufnt.edu.br/
+10,Universidade Federal do Oeste do Pará,UFOPA,Norte,Pará,Federal,https://sigaa.ufopa.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufopa.edu.br/
+11,Universidade Federal do Pará,UFPA,Norte,Pará,Federal,https://sigaa.ufpa.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufpa.br/
+12,Universidade Federal do Sul e Sudeste do Pará,UNIFESSPA,Norte,Pará,Federal,https://sigaa.unifesspa.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.unifesspa.edu.br/
+13,Universidade Federal do Tocantins,UFT,Norte,Tocantins,Federal,https://www.uft.edu.br/concursos-e-selecoes,https://www.uft.edu.br/
+14,Universidade do Estado do Amazonas,UEA,Norte,Amazonas,State,https://selecao1.uea.edu.br/,https://www.uea.edu.br/
+15,Universidade do Estado do Pará,UEPA,Norte,Pará,State,https://sigaa.uepa.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uepa.br/
+16,Universidade Estadual Vale do Acaraú,UVA,Nordeste,Ceará,State,https://ww2.uva.ce.gov.br/apps/view/listagem_documentos.php?buscar=0103,https://uvanet.br
+17,Universidade Estadual da Paraíba,UEPB,Nordeste,Paraíba,State,https://uepb.edu.br/editais/selecao-de-pos-graduacao/,https://uepb.edu.br/
+18,Universidade Estadual da Região Tocantina do Maranhão,UEMASUL,Nordeste,Maranhão,State,https://sigaa.uemasul.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uemasul.edu.br/
+19,Universidade Estadual de Alagoas,UNEAL,Nordeste,Alagoas,State,https://www.uneal.edu.br/editais/editais-2026,https://www.uneal.edu.br/
+20,Universidade Estadual de Ciências da Saúde de Alagoas,UNCISAL,Nordeste,Alagoas,State,https://novo.uncisal.edu.br/editais/pos-graduacao/,https://novo.uncisal.edu.br/
+21,Universidade Estadual de Feira de Santana,UEFS,Nordeste,Bahia,State,https://www.uefs.br/modules/conteudo/conteudo.php?conteudo=11,https://www.uefs.br/
+22,Universidade Estadual de Santa Cruz,UESC,Nordeste,Bahia,State,https://sig.uesc.br/sigaa/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uesc.br/
+23,Universidade Estadual do Ceará,UECE,Nordeste,Ceará,State,https://www.uece.br/propgpq/,https://www.uece.br/
+24,Universidade Estadual do Maranhão,UEMA,Nordeste,Maranhão,State,https://sigaa.uema.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uema.br/
+25,Universidade Estadual do Piauí,UESPI,Nordeste,Piauí,State,https://www.uespi.br/editais,https://uespi.br/
+26,Universidade Estadual do Sudoeste da Bahia,UESB,Nordeste,Bahia,State,https://www.uesb.br/editais/,https://www.uesb.br/
+27,Universidade Federal Rural de Pernambuco,UFRPE,Nordeste,Pernambuco,Federal,https://sigs.ufrpe.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufrpe.br/
+28,Universidade Federal Rural do Semi-Árido,UFERSA,Nordeste,Rio Grande do Norte,Federal,https://sigaa.ufersa.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufersa.edu.br/
+29,Universidade Federal da Bahia,UFBA,Nordeste,Bahia,Federal,https://sigaa.ufba.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufba.br/
+30,Universidade Federal da Lusofonia Afro-Brasileira,UNILAB,Nordeste,Ceará/Bahia,Federal,https://sig.unilab.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://unilab.edu.br/
+31,Universidade Federal da Paraíba,UFPB,Nordeste,Paraíba,Federal,https://sigaa.ufpb.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufpb.br/
+32,Universidade Federal de Alagoas,UFAL,Nordeste,Alagoas,Federal,https://sigaa.sig.ufal.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufal.br/
+33,Universidade Federal de Campina Grande,UFCG,Nordeste,Paraíba,Federal,https://sigaa.ufcg.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufcg.edu.br
+34,Universidade Federal de Pernambuco,UFPE,Nordeste,Pernambuco,Federal,https://sigaa.ufpe.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufpe.br/
+35,Universidade Federal de Sergipe,UFS,Nordeste,Sergipe,Federal,https://sigaa.ufs.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufs.br/
+36,Universidade Federal do Agreste de Pernambuco,UFAPE,Nordeste,Pernambuco,Federal,https://sigs.ufape.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufape.edu.br/
+37,Universidade Federal do Cariri,UFCA,Nordeste,Ceará,Federal,https://sig.ufca.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufca.edu.br/
+38,Universidade Federal do Ceará,UFC,Nordeste,Ceará,Federal,https://sigaa.ufc.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://portal.ufc.br/
+39,Universidade Federal do Delta do Parnaíba,UFDPar,Nordeste,Piauí,Federal,https://sigaa.ufdpar.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufdpar.edu.br/
+40,Universidade Federal do Maranhão,UFMA,Nordeste,Maranhão,Federal,https://sigaa.ufma.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufma.br/
+41,Universidade Federal do Oeste da Bahia,UFOB,Nordeste,Bahia,Federal,https://sig.ufob.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufob.edu.br/
+42,Universidade Federal do Piauí,UFPI,Nordeste,Piauí,Federal,https://sigaa.ufpi.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufpi.br/
+43,Universidade Federal do Recôncavo da Bahia,UFRB,Nordeste,Bahia,Federal,https://www.ufrb.edu.br/ppgecd/processos-seletivos,https://www.ufrb.edu.br/
+44,Universidade Federal do Rio Grande do Norte,UFRN,Nordeste,Rio Grande do Norte,Federal,https://sigaa.ufrn.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufrn.br/
+45,Universidade Federal do Sul da Bahia,UFSB,Nordeste,Bahia,Federal,https://sig.ufsb.edu.br/sigaa/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufsb.edu.br/
+46,Universidade Federal do Vale do São Francisco,UNIVASF,Nordeste,Bahia/Pernambuco/Piauí,Federal,https://ps.univasf.edu.br/,https://www.univasf.edu.br/
+47,Universidade Regional do Cariri,URCA,Nordeste,Ceará,State,https://www.urca.br/prpgp/chamadas-publicas/,https://www.urca.br/
+48,Universidade de Pernambuco,UPE,Nordeste,Pernambuco,State,https://sigaa.upe.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.upe.br/
+49,Universidade do Estado da Bahia,UNEB,Nordeste,Bahia,State,https://www.ssppg.uneb.br/,https://www.uneb.br
+50,Universidade do Estado do Rio Grande do Norte,UERN,Nordeste,Rio Grande do Norte,State,https://sigaa.uern.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://portal.uern.br/
+51,Universidade Estadual de Goiás,UEG,Centro-Oeste,Goiás,State,https://www.ueg.br/prp/conteudo/21253______editais_de_processos_seletivos_stricto_sensu,https://www.ueg.br/
+52,Universidade Estadual de Mato Grosso do Sul,UEMS,Centro-Oeste,Mato Grosso do Sul,State,https://www.uems.br/editais,https://www.uems.br/
+53,Universidade Federal da Grande Dourados,UFGD,Centro-Oeste,Mato Grosso do Sul,Federal,https://sistemas.ufgd.edu.br/scpg-inscricao,https://www.ufgd.edu.br/
+54,Universidade Federal de Catalão,UFCat,Centro-Oeste,Goiás,Federal,https://sigaa.ufcat.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufcat.edu.br/
+55,Universidade Federal de Goiás,UFG,Centro-Oeste,Goiás,Federal,https://sigaa.ufg.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufg.br/
+56,Universidade Federal de Jataí,UFJ,Centro-Oeste,Goiás,Federal,https://sigaa.sistemas.ufj.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-processo&nivel=S,https://www.ufj.edu.br
+57,Universidade Federal de Mato Grosso,UFMT,Centro-Oeste,Mato Grosso,Federal,https://www.ufmt.br/ingresso/,https://www.ufmt.br/
+58,Universidade Federal de Mato Grosso do Sul,UFMS,Centro-Oeste,Mato Grosso do Sul,Federal,https://propp.ufms.br/processo/psu/,https://www.ufms.br/
+59,Universidade Federal de Rondonópolis,UFR,Centro-Oeste,Mato Grosso,Federal,https://ufr.edu.br/seletivos/,https://ufr.edu.br/
+60,Universidade de Brasília,UnB,Centro-Oeste,Distrito Federal,Federal,https://sigaa.unb.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.unb.br/
+61,Universidade do Estado de Mato Grosso,UNEMAT,Centro-Oeste,Mato Grosso,State,https://sigaa.unemat.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://unemat.br/
+62,Fundação Centro Universitário Zona Oeste do Rio de Janeiro,UEZO,Sudeste,Rio de Janeiro,State,http://www.uezo.rj.gov.br/pos-graduacao/processo-seletivo.php,http://www.uezo.rj.gov.br/
+63,"Universidade Estadual Paulista ""Júlio de Mesquita Filho""",UNESP,Sudeste,São Paulo,State,https://www2.unesp.br/portal#!/propg/ingresso,https://www2.unesp.br/
+64,Universidade Estadual de Campinas,UNICAMP,Sudeste,São Paulo,State,https://prpg.unicamp.br/editais/,https://www.unicamp.br/
+65,Universidade Estadual de Montes Claros,UNIMONTES,Sudeste,Minas Gerais,State,https://www.posgraduacao.unimontes.br/editais/editais-stricto-sensu/,https://www.unimontes.br/
+66,Universidade Estadual do Norte Fluminense,UENF,Sudeste,Rio de Janeiro,State,https://uenf.br/portal/editais/5/,https://www.uenf.br/
+67,Universidade Federal Fluminense,UFF,Sudeste,Rio de Janeiro,Federal,http://poscardio.sites.uff.br/?page_id=4612,https://www.uff.br/
+68,Universidade Federal Rural do Rio de Janeiro,UFRRJ,Sudeste,Rio de Janeiro,Federal,https://sigaa.ufrrj.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufrrj.br/
+69,Universidade Federal de Alfenas,UNIFAL-MG,Sudeste,Minas Gerais,Federal,https://www.unifal-mg.edu.br/portal/tag/processos-seletivos/,https://www.unifal-mg.edu.br/
+70,Universidade Federal de Itajubá,UNIFEI,Sudeste,Minas Gerais,Federal,https://sigaa.unifei.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://unifei.edu.br/
+71,Universidade Federal de Juiz de Fora,UFJF,Sudeste,Minas Gerais,Federal,https://www2.ufjf.br/cdara/pos-graduacao-inscricao-matricula-e-cadastro-na-ufjf/,https://www2.ufjf.br/ufjf/
+72,Universidade Federal de Lavras,UFLA,Sudeste,Minas Gerais,Federal,https://sigaa.ufla.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufla.br/
+73,Universidade Federal de Minas Gerais,UFMG,Sudeste,Minas Gerais,Federal,https://www.ufmg.br/prpg/editais/,https://www.ufmg.br/
+74,Universidade Federal de Ouro Preto,UFOP,Sudeste,Minas Gerais,Federal,https://ufop.br/taxonomy/term/28,https://www.ufop.br/
+75,Universidade Federal de São Carlos,UFSCar,Sudeste,São Paulo,Federal,https://www.propg.ufscar.br/pt-br/pos-na-ufscar/programas,https://www.ufscar.br/
+76,Universidade Federal de São João del-Rei,UFSJ,Sudeste,Minas Gerais,Federal,https://sig.ufsj.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://ufsj.edu.br/
+77,Universidade Federal de São Paulo,UNIFESP,Sudeste,São Paulo,Federal,https://proreitoria.unifesp.br/propgpq/pos-graduacao/programas-de-pos-graduacao-stricto-sensu,https://www.unifesp.br/
+78,Universidade Federal de Uberlândia,UFU,Sudeste,Minas Gerais,Federal,https://www.portalselecao.ufu.br/servicos/edital/listar,https://ufu.br/
+79,Universidade Federal de Viçosa,UFV,Sudeste,Minas Gerais,Federal,https://www.ufv.br/pos-graduacao/,https://www.ufv.br/
+80,Universidade Federal do ABC,UFABC,Sudeste,São Paulo,Federal,https://sig.ufabc.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.ufabc.edu.br/
+81,Universidade Federal do Espírito Santo,UFES,Sudeste,Espírito Santo,Federal,https://prppg.ufes.br/conteudo/novos-editais-de-ingresso-para-os-programas-de-p%C3%B3s-gradua%C3%A7%C3%A3o-da-ufes,https://www.ufes.br/
+82,Universidade Federal do Estado do Rio de Janeiro,UNIRIO,Sudeste,Rio de Janeiro,Federal,https://www.unirio.br/propg/diretoria-de-pos-graduacao-2/editais,https://www.unirio.br
+83,Universidade Federal do Rio de Janeiro,UFRJ,Sudeste,Rio de Janeiro,Federal,https://www.ie.ufrj.br/pos-graduacao-j/pos-graduacao-em-economia/ppge-selecao.html,https://ufrj.br/
+84,Universidade Federal do Triângulo Mineiro,UFTM,Sudeste,Minas Gerais,Federal,https://www.uftm.edu.br/pos-graduacao/stricto-sensu,https://www.uftm.edu.br/
+85,Universidade Federal dos Vales do Jequitinhonha e Mucuri,UFVJM,Sudeste,Minas Gerais,Federal,https://portal.ufvjm.edu.br/editais,https://www.ufvjm.edu.br/
+86,Universidade Virtual do Estado de São Paulo,UNIVESP,Sudeste,São Paulo,State,https://univesp.br/pos-graduacao,https://univesp.br/
+87,Universidade de São Paulo,USP,Sudeste,São Paulo,State,https://www5.usp.br/ensino/pos-graduacao/,https://www.usp.br/
+88,Universidade do Estado de Minas Gerais,UEMG,Sudeste,Minas Gerais,State,https://pos.uemg.br/,https://www.uemg.br/
+89,Universidade do Estado do Rio de Janeiro,UERJ,Sudeste,Rio de Janeiro,State,https://sig.uerj.br/sigaa/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uerj.br/
+90,Universidade Estadual de Londrina,UEL,Sul,Paraná,State,https://sites.uel.br/proppg/inscricoes,https://www.uel.br/
+91,Universidade Estadual de Maringá,UEM,Sul,Paraná,State,https://sigs.uem.br/sigaa/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uem.br/
+92,Universidade Estadual de Ponta Grossa,UEPG,Sul,Paraná,State,https://www2.uepg.br/propesp/editais-pos-graduacao-stricto-sensu/,https://www.uepg.br/
+93,Universidade Estadual do Centro-Oeste,UNICENTRO,Sul,Paraná,State,https://www3.unicentro.br/propesp/pos-graduacao/stricto-sensu/editais/,https://www.unicentro.br/
+94,Universidade Estadual do Norte do Paraná,UENP,Sul,Paraná,State,https://uenp.edu.br/pos-graduacao/processos-seletivos,https://www.uenp.edu.br/
+95,Universidade Estadual do Oeste do Paraná,UNIOESTE,Sul,Paraná,State,https://www.unioeste.br/portal/prppg/cursos/stricto-sensu-mestrado-doutorado,https://www.unioeste.br/
+96,Universidade Estadual do Paraná,UNESPAR,Sul,Paraná,State,https://prppg.unespar.edu.br/pos-graduacao/stricto-sensu,https://www.unespar.edu.br/
+97,Universidade Estadual do Rio Grande do Sul,UERGS,Sul,Rio Grande do Sul,State,https://proppg.uergs.edu.br/,https://uergs.edu.br/
+98,Universidade Federal da Fronteira Sul,UFFS,Sul,Rio Grande do Sul/Santa Catarina/Paraná,Federal,https://sigaa.uffs.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S,https://www.uffs.edu.br/
+99,Universidade Federal da Integração Latino-Americana,UNILA,Sul,Paraná,Federal,https://sig.unila.edu.br/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-stricto,https://www.unila.edu.br
+100,Universidade Federal de Ciências da Saúde de Porto Alegre,UFCSPA,Sul,Rio Grande do Sul,Federal,https://processoseletivo.ufcspa.edu.br/menu/,https://ufcspa.edu.br/
+101,Universidade Federal de Pelotas,UFPel,Sul,Rio Grande do Sul,Federal,https://wp.ufpel.edu.br/prppg/editais-da-pos-graduacao/,https://portal.ufpel.edu.br/
+102,Universidade Federal de Santa Catarina,UFSC,Sul,Santa Catarina,Federal,https://ppg.ufsc.br/,https://ufsc.br/
+103,Universidade Federal de Santa Maria,UFSM,Sul,Rio Grande do Sul,Federal,https://www.ufsm.br/pro-reitorias/prpgp/mestrado-doutorado,https://www.ufsm.br/
+104,Universidade Federal do Pampa,UNIPAMPA,Sul,Rio Grande do Sul,Federal,https://sites.unipampa.edu.br/posgraduacao/editais/processos-seletivos-stricto-sensu/editais_andamento_stricto/,https://unipampa.edu.br/portal
+105,Universidade Federal do Paraná,UFPR,Sul,Paraná,Federal,https://www.prppg.ufpr.br/site/pos-graduacao/,https://ufpr.br/
+106,Universidade Federal do Rio Grande,FURG,Sul,Rio Grande do Sul,Federal,https://coperse.furg.br/,https://www.furg.br/
+107,Universidade Federal do Rio Grande do Sul,UFRGS,Sul,Rio Grande do Sul,Federal,"https://www.ufrgs.br/propg/",https://www.ufrgs.br/
+108,Universidade Tecnológica Federal do Paraná,UTFPR,Sul,Paraná,Federal,"https://www.utfpr.edu.br/cursos/coordenacoes/stricto-sensu",https://www.utfpr.edu.br/
+109,Universidade do Estado de Santa Catarina,UDESC,Sul,Santa Catarina,State,"https://www.udesc.br/proppg",https://www.udesc.br/

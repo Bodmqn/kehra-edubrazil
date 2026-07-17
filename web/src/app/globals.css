@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #009739;
+  --bg-accent: #FEDD00;
+  --bg-secondary: #002776;
+  --bg-dark: #0F0F0F;
+  --bg-card: #1A1A1A;
+  --bg-card-hover: #252525;
+  --bg-surface: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --text-muted: #6B6B6B;
+  --border: #2A2A2A;
+  --danger: #EF4444;
+  --success: #22C55E;
+  --warning: #F59E0B;
+}
+
+@theme inline {
+  --color-primary: var(--bg-primary);
+  --color-accent: var(--bg-accent);
+  --color-secondary: var(--bg-secondary);
+  --color-dark: var(--bg-dark);
+  --color-card: var(--bg-card);
+  --color-card-hover: var(--bg-card-hover);
+  --color-surface: var(--bg-surface);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #009739 0%, #FEDD00 50%, #002776 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
