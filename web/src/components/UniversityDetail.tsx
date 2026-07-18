@@ -117,6 +117,22 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                   </h1>
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {university.acronym} · {university.type} · {university.state}
+                    {university.school_url && (
+                      <>
+                        {' · '}
+                        <a
+                          href={university.school_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[var(--bg-primary)] hover:underline"
+                        >
+                          Visit official website
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -253,13 +269,22 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     { label: 'State', value: university.state },
                     { label: 'Acronym', value: university.acronym },
                     { label: 'Total Programs', value: String(programs.length) },
+                    ...(university.school_url ? [{ label: 'Website', value: university.school_url }] : []),
                   ].map((f) => (
                     <div
                       key={f.label}
                       className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3"
                     >
                       <div className="text-xs text-[var(--text-muted)]">{f.label}</div>
-                      <div className="text-sm font-medium text-white">{f.value}</div>
+                      <div className="text-sm font-medium text-white">
+                        {f.label === 'Website' ? (
+                          <a href={f.value} target="_blank" rel="noopener noreferrer" className="text-[var(--bg-primary)] hover:underline break-all">
+                            {f.value.replace(/^https?:\/\//, '')}
+                          </a>
+                        ) : (
+                          f.value
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
