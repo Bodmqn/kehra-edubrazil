@@ -189,3 +189,62 @@ export function useUniversityDetails(universityId: string | null) {
 
   return { details: data, loading }
 }
+
+export function useHomeStats() {
+  const [stats, setStats] = useState({
+    universityCount: 0,
+    programCount: 0,
+    openProgramCount: 0,
+    approachingDeadlineCount: 0,
+    lastScrapeDate: null as string | null,
+  })
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const [
+          { count: uniCount },
+          { count: progCount },
+          { data: logs },
+        ] = await Promise.all([
+          supabase.from('universities').select('*', { count: 'exact', head: true }),
+          supabase.from('programs').select('*', { count: 'exact', head: true }),
+          supabase.from('scrape_logs').select('scraped_at').order('scraped_at', { ascending: false }).limit(1),
+        ])
+
+        const today = new Date().toISOString().split('T')[0]
+        const thirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const { count: openCount } = await supabase
+          .from('programs')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Aberto')
+
+        const { count: approachingCount } = await supabase
+          .from('programs')
+          .select('*', { count: 'exact', head: true })
+          .gte('deadline', today)
+          .lte('deadline', thirtyDays)
+
+        setStats({
+          universityCount: uniCount ?? 0,
+          programCount: progCount ?? 0,
+          openProgramCount: openCount ?? 0,
+          approachingDeadlineCount: approachingCount ?? 0,
+          lastScrapeDate: logs?.[0]?.scraped_at ?? null,
+        })
+      } catch {
+        setStats({
+          universityCount: 109,
+          programCount: 0,
+          openProgramCount: 0,
+          approachingDeadlineCount: 0,
+          lastScrapeDate: null,
+        })
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  return stats
+}

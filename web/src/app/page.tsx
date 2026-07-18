@@ -1,7 +1,37 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
+import { formatDate } from '@/lib/utils'
+import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
+import type { ProgramWithUniversity } from '@/lib/types'
+
+function useLiveStats() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  const stats = useHomeStats()
+  return mounted ? stats : { universityCount: 109, programCount: 0, openProgramCount: 0, approachingDeadlineCount: 0, lastScrapeDate: null }
+}
 
 export default function HomePage() {
+  const stats = useLiveStats()
+  const { programs: allPrograms, loading: programsLoading } = useAllPrograms()
+  const [latestPrograms, setLatestPrograms] = useState<ProgramWithUniversity[]>([])
+
+  useEffect(() => {
+    if (!programsLoading && allPrograms.length > 0) {
+      setLatestPrograms(allPrograms.slice(0, 6))
+    }
+  }, [allPrograms, programsLoading])
+
+  const statItems = [
+    { value: stats.universityCount.toString(), label: 'Universities' },
+    { value: stats.programCount.toString(), label: 'Graduate Programs' },
+    { value: stats.openProgramCount.toString(), label: 'Open Now' },
+    { value: '26+1', label: 'States + DF' },
+  ]
+
   return (
     <div>
       {/* Hero */}
@@ -14,7 +44,7 @@ export default function HomePage() {
               <span className="text-gradient">in Brazil</span>
             </h1>
             <p className="mb-8 text-lg text-[var(--text-secondary)]">
-              Explore Masters and PhD programs across 109 Brazilian universities.
+              Explore Masters and PhD programs across {stats.universityCount} Brazilian universities.
               Track deadlines, compare programs, and apply with confidence.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -37,12 +67,7 @@ export default function HomePage() {
         {/* Stats */}
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {[
-              { value: '109', label: 'Universities' },
-              { value: '5', label: 'Regions' },
-              { value: '26+1', label: 'States + DF' },
-              { value: 'Live', label: 'Data Updates' },
-            ].map((stat) => (
+            {statItems.map((stat) => (
               <div
                 key={stat.label}
                 className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-center"
@@ -54,6 +79,60 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Latest Programs */}
+      {latestPrograms.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white">Latest Programs</h2>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                Recently scraped graduate programs
+              </p>
+            </div>
+            <Link
+              href="/universities"
+              className="text-xs font-medium text-[var(--bg-primary)] hover:underline"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latestPrograms.map((p) => (
+              <Link
+                key={p.id}
+                href={`/universities/${p.university_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`}
+                className="group rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/30"
+              >
+                <div className="mb-2 flex items-start justify-between">
+                  <h3 className="text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors">
+                    {p.name}
+                  </h3>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                      p.status === 'Aberto'
+                        ? 'border-green-500/20 bg-green-500/10 text-green-400'
+                        : p.status === 'Em Breve'
+                          ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                          : 'border-red-500/20 bg-red-500/10 text-red-400'
+                    }`}
+                  >
+                    {p.status}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {p.university_name} ({p.university_acronym})
+                </p>
+                {p.deadline && (
+                  <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                    Deadline: {formatDate(p.deadline)}
+                  </p>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Explore by Region */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
