@@ -168,10 +168,7 @@ class SIGAAParser:
                 logger.warning(f"Skipping {uni['name']} ({uni['acronym']}): invalid SIGAA URL")
                 continue
 
-            actual_url = self.resolve_sigaa_url(sigaa)
-            if not actual_url:
-                logger.warning(f"Skipping {uni['name']} ({uni['acronym']}): no reachable SIGAA listing")
-                continue
+            actual_url = self.resolve_sigaa_url(sigaa) or sigaa
 
             logger.info(f"Scraping {uni['name']} ({uni['acronym']})...")
 
