@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import type { Program } from '@/lib/types'
 import { formatDate, daysUntil, getDeadlineUrgency } from '@/lib/utils'
 import Badge from './Badge'
@@ -9,8 +10,55 @@ interface ProgramCardProps {
 }
 
 export default function ProgramCard({ program }: ProgramCardProps) {
-  const days = daysUntil(program.deadline)
+  const [mounted, setMounted] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem('kehra-edubrazil-tracker')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setSaved(parsed.some((p: { id: string }) => p.id === program.id))
+      } catch { /* ignore */ }
+    }
+  }, [program.id])
+
+  useEffect(() => {
+    if (!justSaved) return
+    const t = setTimeout(() => setJustSaved(false), 2000)
+    return () => clearTimeout(t)
+  }, [justSaved])
+
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(id)
+  }, [])
+
+  const days = mounted ? daysUntil(program.deadline) : null
   const urgency = getDeadlineUrgency(days)
+
+  const handleSave = () => {
+    const stored = localStorage.getItem('kehra-edubrazil-tracker')
+    let list = stored ? JSON.parse(stored) : []
+    if (saved) {
+      list = list.filter((p: { id: string }) => p.id !== program.id)
+      setSaved(false)
+    } else {
+      list.push({
+        id: program.id,
+        name: program.name,
+        university: '',
+        deadline: program.deadline,
+        stage: 'saved',
+      })
+      setSaved(true)
+      setJustSaved(true)
+    }
+    localStorage.setItem('kehra-edubrazil-tracker', JSON.stringify(list))
+  }
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/20">
@@ -54,8 +102,17 @@ export default function ProgramCard({ program }: ProgramCardProps) {
               Edital
             </a>
           )}
-          <button className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:border-[var(--bg-accent)]/30 hover:text-white">
-            Save
+          <button
+            onClick={handleSave}
+            className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${
+              justSaved
+                ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
+                : saved
+                  ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/10 text-[var(--bg-accent)]'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--bg-accent)]/30 hover:text-white'
+            }`}
+          >
+            {justSaved ? 'Saved!' : saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>

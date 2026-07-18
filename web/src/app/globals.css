@@ -40,6 +40,19 @@ body {
   font-family: var(--font-sans, Arial, Helvetica, sans-serif);
 }
 
+*:focus-visible {
+  outline: 2px solid var(--bg-primary);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @layer utilities {
   .text-gradient {
     background: linear-gradient(135deg, #009739 0%, #FEDD00 50%, #002776 100%);
