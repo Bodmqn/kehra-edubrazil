@@ -113,38 +113,28 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     {university.name}
                   </h1>
                   <div className="mt-1 flex items-start justify-between gap-4 text-sm text-[var(--text-secondary)]">
-                    <span>
-                      {university.acronym} · {university.type} · {university.state}
+                    <span className="flex items-center gap-3 flex-wrap">
+                      <span>{university.acronym} · {university.type} · {university.state}</span>
+                      {university.school_url && (
+                        <a
+                          href={university.school_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[var(--bg-primary)] hover:underline whitespace-nowrap"
+                        >
+                          Official website ↗
+                        </a>
+                      )}
                     </span>
-                    {(university.sigaa_url || university.school_url) && (
-                      <div className="flex flex-col items-end gap-0.5 whitespace-nowrap">
-                        {university.sigaa_url && (
-                          <a
-                            href={university.sigaa_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[var(--success)] hover:underline"
-                          >
-                            View open selections
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </a>
-                        )}
-                        {university.school_url && (
-                          <a
-                            href={university.school_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[var(--bg-primary)] hover:underline"
-                          >
-                            Official website
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </a>
-                        )}
-                      </div>
+                    {university.sigaa_url && (
+                      <a
+                        href={university.sigaa_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[var(--success)] hover:underline whitespace-nowrap"
+                      >
+                        View open selections ↗
+                      </a>
                     )}
                   </div>
                 </div>
