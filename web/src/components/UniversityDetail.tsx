@@ -269,37 +269,17 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     { label: 'State', value: university.state },
                     { label: 'Acronym', value: university.acronym },
                     { label: 'Total Programs', value: String(programs.length) },
-                    ...(university.school_url ? [{ label: 'Website', value: university.school_url }] : []),
                   ].map((f) => (
                     <div
                       key={f.label}
                       className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3"
                     >
                       <div className="text-xs text-[var(--text-muted)]">{f.label}</div>
-                      <div className="text-sm font-medium text-white">
-                        {f.label === 'Website' ? (
-                          <a href={f.value} target="_blank" rel="noopener noreferrer" className="text-[var(--bg-primary)] hover:underline break-all">
-                            {f.value.replace(/^https?:\/\//, '')}
-                          </a>
-                        ) : (
-                          f.value
-                        )}
-                      </div>
+                      <div className="text-sm font-medium text-white">{f.value}</div>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {university.school_url && (
-                <a
-                  href={university.school_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg-card)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white"
-                >
-                  Visit official website ↗
-                </a>
-              )}
             </div>
           )}
 
