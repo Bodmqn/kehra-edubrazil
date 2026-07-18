@@ -29,6 +29,99 @@ interface ProgramMatch {
 const STORAGE_KEY = 'kehra-edubrazil-tracker'
 const SAVED_SEARCH_KEY = 'kehra-edubrazil-matching-saved'
 
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+const EN_TO_PT: Record<string, string[]> = {
+  'computer': ['computação', 'computacional', 'informática'],
+  'science': ['ciência', 'científico'],
+  'engineering': ['engenharia'],
+  'mathematics': ['matemática'],
+  'math': ['matemática'],
+  'physics': ['física'],
+  'chemistry': ['química'],
+  'biology': ['biologia'],
+  'medicine': ['medicina', 'médico'],
+  'medical': ['medicina', 'médico'],
+  'law': ['direito'],
+  'education': ['educação', 'ensino', 'pedagogia'],
+  'economics': ['economia'],
+  'business': ['administração', 'negócios', 'empresarial'],
+  'arts': ['artes'],
+  'literature': ['letras', 'literatura'],
+  'agriculture': ['agricultura', 'agronomia'],
+  'environmental': ['ambiental', 'ecologia'],
+  'health': ['saúde'],
+  'social': ['social'],
+  'humanities': ['humanidades'],
+  'linguistics': ['linguística'],
+  'language': ['língua', 'linguagem', 'idioma'],
+  'master': ['mestrado'],
+  'phd': ['doutorado'],
+  'doctoral': ['doutorado'],
+  'graduate': ['pós-graduação', 'pos-graduacao'],
+  'administration': ['administração'],
+  'management': ['gestão', 'administração'],
+  'accounting': ['contabilidade'],
+  'nursing': ['enfermagem'],
+  'psychology': ['psicologia'],
+  'sociology': ['sociologia'],
+  'philosophy': ['filosofia'],
+  'history': ['história'],
+  'geography': ['geografia'],
+  'architecture': ['arquitetura'],
+  'urbanism': ['urbanismo'],
+  'design': ['design'],
+  'music': ['música'],
+  'theater': ['teatro'],
+  'dance': ['dança'],
+  'veterinary': ['veterinária'],
+  'zoology': ['zoologia'],
+  'botany': ['botânica'],
+  'ecology': ['ecologia'],
+  'geology': ['geologia'],
+  'oceanography': ['oceanografia'],
+  'astronomy': ['astronomia'],
+  'statistics': ['estatística'],
+  'nutrition': ['nutrição'],
+  'pharmacy': ['farmácia'],
+  'dentistry': ['odontologia'],
+  'public': ['público', 'pública'],
+  'international': ['internacional'],
+  'relations': ['relações', 'relacoe'],
+  'political': ['político', 'política', 'ciência política'],
+  'anthropology': ['antropologia'],
+  'communication': ['comunicação'],
+  'journalism': ['jornalismo'],
+  'information': ['informação', 'informatica'],
+  'technology': ['tecnologia'],
+  'applied': ['aplicada', 'aplicado'],
+  'production': ['produção'],
+  'sanitary': ['sanitária'],
+  'animal': ['animal'],
+  'plant': ['vegetal', 'plantas'],
+  'forest': ['florestal', 'floresta'],
+  'food': ['alimentos', 'alimentação'],
+  'energy': ['energia'],
+  'transport': ['transporte'],
+  'materials': ['materiais'],
+  'mechanical': ['mecânica'],
+  'electrical': ['elétrica'],
+  'civil': ['civil'],
+  'chemical': ['química'],
+  'industrial': ['industrial'],
+}
+
+function expandTokens(tokens: string[]): string[] {
+  const expanded = new Set(tokens.map(t => normalize(t)))
+  tokens.forEach(t => {
+    const pt = EN_TO_PT[normalize(t)]
+    if (pt) pt.forEach(p => expanded.add(normalize(p)))
+  })
+  return [...expanded]
+}
+
 export default function MatchingPage() {
   usePageMeta('Program Matching', 'Find graduate programs that match your interests in Brazil')
   const { programs: allPrograms, loading } = useAllPrograms()
@@ -122,13 +215,22 @@ export default function MatchingPage() {
 
   const debouncedAiQuery = useDebounce(aiQuery, 300)
 
+  useEffect(() => {
+    if (debouncedAiQuery.trim().length >= 2) {
+      setShowAutocomplete(true)
+    }
+  }, [debouncedAiQuery])
+
   const autocompleteResults = useMemo(() => {
-    const q = debouncedAiQuery.trim().toLowerCase()
+    const q = debouncedAiQuery.trim()
     if (!q || q.length < 2 || !allPrograms.length) return []
+    const qTokens = q.toLowerCase().split(/\s+/).filter(t => t.length > 1)
+    const searchTerms = expandTokens(qTokens)
+    if (searchTerms.length === 0) return []
     return allPrograms
       .filter(p => {
-        const haystack = `${p.name} ${p.university_name} ${p.university_acronym}`.toLowerCase()
-        return haystack.includes(q)
+        const haystack = normalize(`${p.name} ${p.university_name} ${p.university_acronym}`)
+        return searchTerms.some(term => haystack.includes(term))
       })
       .slice(0, 8)
       .map(p => ({
@@ -145,7 +247,8 @@ export default function MatchingPage() {
   const searchTokens = useMemo(() => {
     const q = aiQuery.trim()
     if (!q) return null
-    return q.toLowerCase().split(/\s+/).filter(t => t.length > 1)
+    const tokens = q.toLowerCase().split(/\s+/).filter(t => t.length > 1)
+    return expandTokens(tokens)
   }, [aiQuery])
 
   const results = useMemo((): ProgramMatch[] => {
@@ -157,7 +260,7 @@ export default function MatchingPage() {
       if (openOnly && p.status !== 'Aberto') return
 
       if (searchTokens && searchTokens.length > 0) {
-        const haystack = `${p.name} ${p.field || ''} ${p.university_name} ${p.university_acronym}`.toLowerCase()
+        const haystack = normalize(`${p.name} ${p.field || ''} ${p.university_name} ${p.university_acronym}`)
         if (!searchTokens.some(t => haystack.includes(t))) return
       }
 
@@ -336,9 +439,7 @@ export default function MatchingPage() {
                   setHighlightedIndex(-1)
                 }
               }}
-              onFocus={() => {
-                if (debouncedAiQuery.trim().length >= 2) setShowAutocomplete(true)
-              }}
+              onFocus={() => setShowAutocomplete(true)}
               onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
               placeholder='Search programs or universities... e.g. "Computer Science"'
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)] transition-colors"
