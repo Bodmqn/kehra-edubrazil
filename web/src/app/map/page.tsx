@@ -132,7 +132,7 @@ export default function MapPage() {
 
       {/* Map */}
       <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
-        <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/5 to-[var(--bg-secondary)]/5">
+        <div className="relative flex aspect-[1000/912] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/5 to-[var(--bg-secondary)]/5">
           {/* Brazil state outlines background */}
           <img
             src="/brazil.svg"
