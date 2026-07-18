@@ -23,15 +23,19 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!programsLoading && allPrograms.length > 0) {
-      const withDeadlines = allPrograms.filter(p => p.deadline !== null)
+      const now = new Date()
+      const upcoming = allPrograms.filter(p => {
+        if (!p.deadline) return false
+        return new Date(p.deadline) >= now
+      })
       const seen = new Set<string>()
-      const diversified = withDeadlines.filter(p => {
+      const diversified = upcoming.filter(p => {
         if (seen.size >= 6) return false
         if (seen.has(p.university_id)) return false
         seen.add(p.university_id)
         return true
       })
-      setLatestPrograms(diversified.length > 0 ? diversified : allPrograms.slice(0, 6))
+      setLatestPrograms(diversified.length > 0 ? diversified : upcoming.slice(0, 6))
     }
   }, [allPrograms, programsLoading])
 
