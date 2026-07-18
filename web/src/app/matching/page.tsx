@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useAllPrograms } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
-import { REGIONS, PROGRAM_FIELDS, UNIVERSITY_TYPES } from '@/lib/constants'
+import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { slugify, daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
+import { useDebounce } from '@/lib/hooks'
 
 interface ProgramMatch {
   id: string
@@ -31,9 +32,11 @@ const SAVED_SEARCH_KEY = 'kehra-edubrazil-matching-saved'
 export default function MatchingPage() {
   usePageMeta('Program Matching', 'Find graduate programs that match your interests in Brazil')
   const { programs: allPrograms, loading } = useAllPrograms()
-  const [step, setStep] = useState(1)
-  const [field, setField] = useState('')
   const [level, setLevel] = useState<'Mestrado' | 'Doutorado' | 'Ambos' | ''>('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [region, setRegion] = useState<Region | ''>('')
   const [type, setType] = useState<UniversityType | ''>('')
   const [aiQuery, setAiQuery] = useState('')
@@ -46,19 +49,19 @@ export default function MatchingPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
   const [showRestoreBanner, setShowRestoreBanner] = useState(false)
+  const [showSavedSearchFeedback, setShowSavedSearchFeedback] = useState(false)
+  const [hasVisitedBefore, setHasVisitedBefore] = useState<boolean | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
 
   // Restore search from URL params on mount
   useEffect(() => {
-    const f = searchParams.get('f')
     const l = searchParams.get('l')
     const r = searchParams.get('r')
     const t = searchParams.get('t')
     const q = searchParams.get('q')
     const o = searchParams.get('o')
-    if (f || l || r || t || q) {
-      if (f) setField(f)
+    if (l || r || t || q) {
       if (l && ['Mestrado', 'Doutorado', 'Ambos'].includes(l)) setLevel(l as typeof level)
       if (r && REGIONS.some(reg => reg.key === r)) setRegion(r as Region)
       if (t && ['Federal', 'State'].includes(t)) setType(t as UniversityType)
@@ -72,7 +75,6 @@ export default function MatchingPage() {
   useEffect(() => {
     if (!showResults) return
     const params = new URLSearchParams()
-    if (field) params.set('f', field)
     if (level) params.set('l', level)
     if (region) params.set('r', region)
     if (type) params.set('t', type)
@@ -80,7 +82,7 @@ export default function MatchingPage() {
     if (openOnly) params.set('o', '1')
     const qs = params.toString()
     router.replace(qs ? `/matching?${qs}` : '/matching', { scroll: false })
-  }, [field, level, region, type, aiQuery, openOnly, showResults, router])
+  }, [level, region, type, aiQuery, openOnly, showResults, router])
 
   // Check for saved search on mount
   useEffect(() => {
@@ -88,13 +90,13 @@ export default function MatchingPage() {
     if (saved && !showResults) {
       setShowRestoreBanner(true)
     }
+    setHasVisitedBefore(localStorage.getItem('kehra-edubrazil-visited') === '1')
   }, [])
 
   const restoreSearch = () => {
     const saved = localStorage.getItem(SAVED_SEARCH_KEY)
     if (saved) {
       const s = JSON.parse(saved)
-      if (s.field) setField(s.field)
       if (s.level) setLevel(s.level)
       if (s.region) setRegion(s.region)
       if (s.type) setType(s.type)
@@ -112,9 +114,33 @@ export default function MatchingPage() {
   }
 
   const saveCurrentSearch = () => {
-    const data = { field, level, region, type, aiQuery, openOnly }
+    const data = { level, region, type, aiQuery, openOnly }
     localStorage.setItem(SAVED_SEARCH_KEY, JSON.stringify(data))
+    setShowSavedSearchFeedback(true)
+    setTimeout(() => setShowSavedSearchFeedback(false), 2000)
   }
+
+  const debouncedAiQuery = useDebounce(aiQuery, 300)
+
+  const autocompleteResults = useMemo(() => {
+    const q = debouncedAiQuery.trim().toLowerCase()
+    if (!q || q.length < 2 || !allPrograms.length) return []
+    return allPrograms
+      .filter(p => {
+        const haystack = `${p.name} ${p.university_name} ${p.university_acronym}`.toLowerCase()
+        return haystack.includes(q)
+      })
+      .slice(0, 8)
+      .map(p => ({
+        id: p.id,
+        programName: p.name,
+        universityName: p.university_name,
+        universityAcronym: p.university_acronym,
+        level: p.level,
+        deadline: p.deadline,
+        status: p.status,
+      }))
+  }, [debouncedAiQuery, allPrograms])
 
   const searchTokens = useMemo(() => {
     const q = aiQuery.trim()
@@ -136,12 +162,10 @@ export default function MatchingPage() {
       }
 
       let score = 50
-      if (field && p.field?.toLowerCase().includes(field.toLowerCase())) score += 30
       if (level && level !== 'Ambos' && p.level === level) score += 20
       if (level === 'Ambos') score += 10
       if (searchTokens) score += 15
 
-      if (field && !p.field?.toLowerCase().includes(field.toLowerCase())) return
       if (level && level !== 'Ambos' && p.level !== level) return
 
       matches.push({
@@ -176,7 +200,7 @@ export default function MatchingPage() {
       return b.matchScore - a.matchScore
     })
     return matches
-  }, [allPrograms, field, level, region, type, aiQuery, openOnly, searchTokens, sortBy])
+  }, [allPrograms, level, region, type, aiQuery, openOnly, searchTokens, sortBy])
 
   const displayedResults = results.slice(0, resultLimit)
 
@@ -219,13 +243,17 @@ export default function MatchingPage() {
     })
   }
 
+  const comparedPrograms = useMemo(() => {
+    return results.filter(r => compareIds.has(r.id)).slice(0, 3)
+  }, [results, compareIds])
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">Program Matching</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Find graduate programs that match your interests
-        </p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Search across {allPrograms.length} real graduate programs from {new Set(allPrograms.map(p => p.university_name)).size} Brazilian universities
+          </p>
       </div>
 
       {/* Restore saved search banner */}
@@ -253,134 +281,223 @@ export default function MatchingPage() {
         </div>
       )}
 
-      {/* Step wizard */}
+      {/* First visit hint */}
+      {!showResults && !showRestoreBanner && hasVisitedBefore === false && (
+        <div className="mb-8 rounded-xl border border-[var(--bg-accent)]/20 bg-[var(--bg-accent)]/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Search across {allPrograms.length} real graduate programs from {new Set(allPrograms.map(p => p.university_name)).size} Brazilian universities. Try typing a program name or keyword above.
+            </p>
+            <button
+              onClick={() => {
+                setHasVisitedBefore(true)
+                localStorage.setItem('kehra-edubrazil-visited', '1')
+              }}
+              className="shrink-0 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
       {!showResults && (
         <div className="mb-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
-          <div className="mb-6 flex items-center gap-2">
-            {[1, 2, 3, 4].map((s) => (
-              <div key={s} className="flex items-center gap-2" role="listitem">
-                <div
-                  role="step"
-                  aria-current={step === s ? 'step' : undefined}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
-                    step >= s
-                      ? 'bg-[var(--bg-primary)] text-white'
-                      : 'border border-[var(--border)] text-[var(--text-muted)]'
-                  }`}
-                >
-                  {s}
-                </div>
-                {s < 4 && <div className="h-px w-6 bg-[var(--border)]" />}
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={aiQuery}
+              onChange={(e) => {
+                setAiQuery(e.target.value)
+                setHighlightedIndex(-1)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (highlightedIndex >= 0 && autocompleteResults[highlightedIndex]) {
+                    const selected = autocompleteResults[highlightedIndex]
+                    setAiQuery(selected.programName)
+                  }
+                  setShowResults(true)
+                  setHighlightedIndex(-1)
+                  setShowAutocomplete(false)
+                }
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  setHighlightedIndex(prev => Math.min(prev + 1, autocompleteResults.length - 1))
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  setHighlightedIndex(prev => Math.max(prev - 1, -1))
+                }
+                if (e.key === 'Escape') {
+                  setShowAutocomplete(false)
+                  setHighlightedIndex(-1)
+                }
+              }}
+              onFocus={() => {
+                if (debouncedAiQuery.trim().length >= 2) setShowAutocomplete(true)
+              }}
+              onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+              placeholder='Search programs or universities... e.g. "Computer Science"'
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)] transition-colors"
+            />
+            {showAutocomplete && autocompleteResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-xl" role="listbox">
+                {autocompleteResults.map((item, i) => {
+                  const days = daysUntil(item.deadline)
+                  const urgency = getDeadlineUrgency(days)
+                  return (
+                    <button
+                      key={item.id}
+                      role="option"
+                      aria-selected={i === highlightedIndex}
+                      onClick={() => {
+                        setAiQuery(item.programName)
+                        setShowResults(true)
+                        setShowAutocomplete(false)
+                      }}
+                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+                        i === highlightedIndex
+                          ? 'bg-[var(--bg-primary)]/10'
+                          : 'hover:bg-[var(--bg-dark)]'
+                      } ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-white truncate">{item.programName}</div>
+                        <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                          {item.universityName} ({item.universityAcronym})
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 gap-1">
+                        {item.deadline && (
+                          <span className="text-[10px]" style={{ color: urgency.color }}>{urgency.label}</span>
+                        )}
+                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                          item.status === 'Aberto'
+                            ? 'border-green-500/20 bg-green-500/10 text-green-400'
+                            : item.status === 'Em Breve'
+                              ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                              : 'border-red-500/20 bg-red-500/10 text-red-400'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
-            ))}
+            )}
           </div>
 
-          {step === 1 && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">
-                What field do you want to study?
-              </label>
-              <select
-                value={field}
-                onChange={(e) => setField(e.target.value)}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-2.5 text-sm text-white outline-none"
-              >
-                <option value="">Any field</option>
-                {PROGRAM_FIELDS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setStep(2)}
-                className="mt-4 rounded-lg bg-[var(--bg-primary)] px-4 py-2 text-sm font-medium text-white"
-              >
-                Next →
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="mt-3 flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+          >
+            {showAdvancedFilters ? '▲' : '▼'} Advanced filters
+          </button>
 
-          {step === 2 && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">Choose level</label>
-              <div className="flex gap-2">
-                {(['Mestrado', 'Doutorado', 'Ambos'] as const).map((l) => (
+          {showAdvancedFilters && (
+            <div className="mt-3 space-y-4 border-t border-[var(--border)] pt-4">
+              <div>
+                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Level</label>
+                <div className="flex flex-wrap gap-2">
                   <button
-                    key={l}
-                    onClick={() => { setLevel(l); setStep(3) }}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                      level === l
-                        ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                    onClick={() => setLevel('')}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      !level
+                        ? 'border-white bg-white/10 text-white'
                         : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
                     }`}
                   >
-                    {l === 'Ambos' ? 'Both' : l}
+                    Any level
                   </button>
-                ))}
+                  {(['Mestrado', 'Doutorado', 'Ambos'] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLevel(l)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                        level === l
+                          ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                      }`}
+                    >
+                      {l === 'Ambos' ? 'Both' : l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Region</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setRegion('')}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      !region
+                        ? 'border-white bg-white/10 text-white'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                    }`}
+                  >
+                    Any region
+                  </button>
+                  {REGIONS.map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => setRegion(r.key)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                        region === r.key
+                          ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                      }`}
+                    >
+                      {r.key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">University type</label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setType('')}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      !type
+                        ? 'border-white bg-white/10 text-white'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                    }`}
+                  >
+                    Any type
+                  </button>
+                  {UNIVERSITY_TYPES.map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setType(t.key)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                        type === t.key
+                          ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
+                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {step === 3 && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">Preferred region</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => { setRegion(''); setStep(4) }}
-                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                    !region
-                      ? 'border-white bg-white/10 text-white'
-                      : 'border-[var(--border)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  Any region
-                </button>
-                {REGIONS.map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => { setRegion(r.key); setStep(4) }}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                      region === r.key
-                        ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    {r.key}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">University type</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setType(''); setShowResults(true) }}
-                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                    !type
-                      ? 'border-white bg-white/10 text-white'
-                      : 'border-[var(--border)] text-[var(--text-secondary)]'
-                  }`}
-                >
-                  Any type
-                </button>
-                {UNIVERSITY_TYPES.map((t) => (
-                  <button
-                    key={t.key}
-                    onClick={() => { setType(t.key); setShowResults(true) }}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                      type === t.key
-                        ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <button
+            onClick={() => setShowResults(true)}
+            className="mt-4 w-full rounded-lg bg-[var(--bg-accent)] py-2.5 text-sm font-medium text-black hover:bg-[var(--bg-accent)]/90 transition-colors"
+          >
+            Search
+          </button>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            Search across {allPrograms.length} programs from {new Set(allPrograms.map(p => p.university_name)).size} universities
+          </p>
         </div>
       )}
 
@@ -389,7 +506,6 @@ export default function MatchingPage() {
         <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-[var(--text-muted)]">Filters:</span>
-            {field && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{field}</span>}
             {level && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{level === 'Ambos' ? 'Both' : level}</span>}
             {region && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{region}</span>}
             {type && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{type}</span>}
@@ -399,7 +515,7 @@ export default function MatchingPage() {
               </span>
             )}
             <button
-              onClick={() => { setShowResults(false); setStep(1) }}
+              onClick={() => { setShowResults(false); setCompareIds(new Set()); setExpandedId(null) }}
               className="ml-auto text-xs text-[var(--text-muted)] hover:text-white transition-colors"
             >
               Change filters
@@ -440,35 +556,12 @@ export default function MatchingPage() {
             >
               Save Search
             </button>
+            {showSavedSearchFeedback && (
+              <span className="text-[11px] text-green-400">Saved!</span>
+            )}
           </div>
         </div>
       )}
-
-      {/* Keyword search */}
-      <div className="mb-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
-        <label className="mb-2 block text-sm font-medium text-white">
-          Or search by keywords
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={aiQuery}
-            onChange={(e) => setAiQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && setShowResults(true)}
-            placeholder='e.g. "PhD in Computer Science in São Paulo"'
-            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-2.5 text-sm text-white placeholder-[var(--text-muted)] outline-none"
-          />
-          <button
-            onClick={() => setShowResults(true)}
-            className="rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black"
-          >
-            Search
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-[var(--text-muted)]">
-          Keyword search across program names, fields, and universities
-        </p>
-      </div>
 
       {/* Loading */}
       {showResults && loading && (
@@ -521,7 +614,7 @@ export default function MatchingPage() {
                             className="h-2 w-2 shrink-0 rounded-full"
                             style={{ backgroundColor: regColor }}
                           />
-                          {i === 0 && (
+                          {sortBy === 'score' && r.matchScore === results[0].matchScore && (
                             <span className="rounded bg-[var(--bg-accent)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg-accent)] shrink-0">
                               BEST MATCH
                             </span>
@@ -622,7 +715,7 @@ export default function MatchingPage() {
                   <thead>
                     <tr className="border-b border-[var(--border)]">
                       <th className="py-2 pr-4 text-left text-[var(--text-muted)] font-medium">Attribute</th>
-                      {results.filter(r => compareIds.has(r.id)).slice(0, 3).map(r => (
+                      {comparedPrograms.map(r => (
                         <th key={r.id} className="py-2 px-3 text-left font-semibold text-white">{r.universityAcronym}</th>
                       ))}
                     </tr>
@@ -640,7 +733,7 @@ export default function MatchingPage() {
                     ].map(row => (
                       <tr key={row.label} className="border-b border-[var(--border)] last:border-0">
                         <td className="py-2 pr-4 text-[var(--text-muted)] whitespace-nowrap">{row.label}</td>
-                        {results.filter(r => compareIds.has(r.id)).slice(0, 3).map(r => (
+                        {comparedPrograms.map(r => (
                           <td key={r.id} className="py-2 px-3 text-[var(--text-secondary)]">{row.get(r)}</td>
                         ))}
                       </tr>
@@ -669,12 +762,14 @@ export default function MatchingPage() {
           </p>
           <button
             onClick={() => {
-              setField('')
               setLevel('')
               setRegion('')
               setType('')
+              setSortBy('score')
+              setOpenOnly(false)
+              setAiQuery('')
+              setResultLimit(20)
               setShowResults(false)
-              setStep(1)
               setCompareIds(new Set())
               setExpandedId(null)
             }}
