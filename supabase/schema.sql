@@ -85,3 +85,54 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ALTER TABLE programs ADD COLUMN IF NOT EXISTS embedding vector(384);
 CREATE INDEX IF NOT EXISTS idx_programs_embedding ON programs USING hnsw (embedding vector_cosine_ops);
+
+-- Row-Level Security
+-- Anon key (client-side): SELECT only on public tables
+-- Service role (scraper): full access
+
+ALTER TABLE universities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE university_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE study_guides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scrape_logs ENABLE ROW LEVEL SECURITY;
+
+-- Public read policies
+CREATE POLICY "Allow anon SELECT on universities"
+  ON universities FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon SELECT on programs"
+  ON programs FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon SELECT on university_details"
+  ON university_details FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon SELECT on study_guides"
+  ON study_guides FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon SELECT on scrape_logs"
+  ON scrape_logs FOR SELECT TO anon USING (true);
+
+-- Service role full access (scraper)
+CREATE POLICY "Allow service INSERT on universities"
+  ON universities FOR INSERT TO service_role WITH CHECK (true);
+
+CREATE POLICY "Allow service UPDATE on universities"
+  ON universities FOR UPDATE TO service_role USING (true);
+
+CREATE POLICY "Allow service INSERT on programs"
+  ON programs FOR INSERT TO service_role WITH CHECK (true);
+
+CREATE POLICY "Allow service UPDATE on programs"
+  ON programs FOR UPDATE TO service_role USING (true);
+
+CREATE POLICY "Allow service DELETE on programs"
+  ON programs FOR DELETE TO service_role USING (true);
+
+CREATE POLICY "Allow service INSERT on university_details"
+  ON university_details FOR INSERT TO service_role WITH CHECK (true);
+
+CREATE POLICY "Allow service UPDATE on university_details"
+  ON university_details FOR UPDATE TO service_role USING (true);
+
+CREATE POLICY "Allow service INSERT on scrape_logs"
+  ON scrape_logs FOR INSERT TO service_role WITH CHECK (true);

@@ -28,8 +28,8 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python scraper/sigaa_parser.py
 
-      - name: Run Wikipedia Scraper (weekly — Sundays only)
-        if: github.event_name == 'schedule' && github.run_attempt == 1
+      - name: Run Wikipedia Scraper (Sundays only)
+        if: github.event_name != 'pull_request'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
