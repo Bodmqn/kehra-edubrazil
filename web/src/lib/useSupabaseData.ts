@@ -121,7 +121,7 @@ export function useAllPrograms() {
         const { data: programs, error } = await supabase
           .from('programs')
           .select('*, universities(name, acronym, region, type)')
-          .order('deadline', { ascending: true })
+          .order('deadline', { ascending: true, nullsFirst: false })
 
         if (error) throw error
 

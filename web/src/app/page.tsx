@@ -82,14 +82,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Latest Programs */}
+      {/* Upcoming Deadlines */}
       {latestPrograms.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white">Latest Programs</h2>
+              <h2 className="text-2xl font-bold text-white">Upcoming Deadlines</h2>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                Recently scraped graduate programs
+                Programs with the nearest application deadlines
               </p>
             </div>
             <Link
@@ -107,9 +107,16 @@ export default function HomePage() {
                 className="group rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/30"
               >
                 <div className="mb-2 flex items-start justify-between">
-                  <h3 className="text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors">
-                    {p.name}
-                  </h3>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors truncate">
+                      {p.name}
+                    </h3>
+                    {p.level && (
+                      <p className="mt-0.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                        {p.level}{p.field ? ` · ${p.field}` : ''}
+                      </p>
+                    )}
+                  </div>
                   <span
                     className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                       p.status === 'Aberto'
@@ -122,7 +129,7 @@ export default function HomePage() {
                     {p.status}
                   </span>
                 </div>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-xs text-[var(--text-muted)] truncate">
                   {p.university_name} ({p.university_acronym})
                 </p>
                 {p.deadline && (
