@@ -40,6 +40,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
   const [programSearch, setProgramSearch] = useState('')
   const [levelFilter, setLevelFilter] = useState<'all' | 'Mestrado' | 'Doutorado'>('all')
   const [showOpenOnly, setShowOpenOnly] = useState(true)
+  const [sortBy, setSortBy] = useState<'name' | 'deadline' | 'status'>('name')
 
   const showMockPrograms = !programsLoading && livePrograms.length === 0
   const programs = livePrograms.length > 0
@@ -49,7 +50,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
       : []
 
   const filteredPrograms = useMemo(() => {
-    return programs.filter((p) => {
+    const filtered = programs.filter((p) => {
       if (showOpenOnly && p.status !== 'Aberto') return false
       if (levelFilter !== 'all' && p.level !== levelFilter) return false
       if (programSearch) {
@@ -59,7 +60,21 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
       }
       return true
     })
-  }, [programs, programSearch, levelFilter, showOpenOnly])
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      if (sortBy === 'deadline') {
+        if (!a.deadline && !b.deadline) return 0
+        if (!a.deadline) return 1
+        if (!b.deadline) return -1
+        return a.deadline.localeCompare(b.deadline)
+      }
+      const order = { Aberto: 0, 'Em Breve': 1, Fechado: 2 }
+      return (order[a.status as keyof typeof order] ?? 3) - (order[b.status as keyof typeof order] ?? 3)
+    })
+
+    return filtered
+  }, [programs, programSearch, levelFilter, showOpenOnly, sortBy])
 
   if (!university) {
     return (
@@ -167,6 +182,15 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                       {level === 'all' ? 'All' : level}
                     </button>
                   ))}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-white outline-none"
+                  >
+                    <option value="name">Name A-Z</option>
+                    <option value="deadline">Deadline</option>
+                    <option value="status">Status</option>
+                  </select>
                   <button
                     onClick={() => setShowOpenOnly(!showOpenOnly)}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${

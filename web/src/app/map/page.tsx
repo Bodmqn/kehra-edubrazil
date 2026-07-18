@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { universities } from '@/lib/data'
 import { slugify, formatDate } from '@/lib/utils'
 import { getMockPrograms } from '@/lib/mock-programs'
-import { REGIONS } from '@/lib/constants'
-import type { Region } from '@/lib/types'
+import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
+import type { Region, UniversityType } from '@/lib/types'
+import SearchInput from '@/components/SearchInput'
 import Link from 'next/link'
 
 const regionCoords: Record<string, { lat: number; lng: number }> = {
@@ -52,11 +53,22 @@ const stateCoords: Record<string, { lat: number; lng: number }> = {
 
 export default function MapPage() {
   const [selectedRegion, setSelectedRegion] = useState<Region | ''>('')
+  const [selectedType, setSelectedType] = useState<UniversityType | ''>('')
+  const [search, setSearch] = useState('')
   const [hoveredUni, setHoveredUni] = useState<string | null>(null)
 
-  const filtered = selectedRegion
-    ? universities.filter((u) => u.region === selectedRegion)
-    : universities
+  const filtered = useMemo(() => {
+    return universities.filter((u) => {
+      if (selectedRegion && u.region !== selectedRegion) return false
+      if (selectedType && u.type !== selectedType) return false
+      if (search) {
+        const q = search.toLowerCase()
+        if (!u.name.toLowerCase().includes(q) && !u.acronym.toLowerCase().includes(q))
+          return false
+      }
+      return true
+    })
+  }, [selectedRegion, selectedType, search])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -67,31 +79,49 @@ export default function MapPage() {
         </p>
       </div>
 
-      {/* Region filter */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedRegion('')}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-            !selectedRegion
-              ? 'border-white bg-white/10 text-white'
-              : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-          }`}
-        >
-          All
-        </button>
-        {REGIONS.map((r) => (
+      {/* Search + Filters */}
+      <div className="mb-6 space-y-4">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search universities..." />
+        <div className="flex flex-wrap gap-2">
           <button
-            key={r.key}
-            onClick={() => setSelectedRegion(r.key)}
+            onClick={() => setSelectedRegion('')}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-              selectedRegion === r.key
-                ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+              !selectedRegion
+                ? 'border-white bg-white/10 text-white'
                 : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
             }`}
           >
-            {r.key}
+            All Regions
           </button>
-        ))}
+          {REGIONS.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setSelectedRegion(r.key)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                selectedRegion === r.key
+                  ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              {r.key}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {UNIVERSITY_TYPES.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSelectedType(selectedType === t.key ? '' : t.key)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                selectedType === t.key
+                  ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Map visualization */}

@@ -15,6 +15,8 @@ const STORAGE_KEY = 'kehra-edubrazil-tracker'
 
 export default function TrackerPage() {
   const [programs, setPrograms] = useState<SavedProgram[]>([])
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<'deadline' | 'name'>('deadline')
   const [email, setEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
 
@@ -64,7 +66,24 @@ export default function TrackerPage() {
     { key: 'applied', label: 'Applied', color: 'var(--bg-secondary)' },
   ]
 
-  const approachingDeadlines = programs.filter((p) => {
+  const filteredPrograms = programs
+    .filter((p) => {
+      if (!search) return true
+      const q = search.toLowerCase()
+      return p.name.toLowerCase().includes(q) || p.university.toLowerCase().includes(q)
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      if (sortBy === 'deadline') {
+        if (!a.deadline && !b.deadline) return 0
+        if (!a.deadline) return 1
+        if (!b.deadline) return -1
+        return a.deadline.localeCompare(b.deadline)
+      }
+      return 0
+    })
+
+  const approachingDeadlines = filteredPrograms.filter((p) => {
     const days = daysUntil(p.deadline)
     return days !== null && days >= 0 && days <= 30
   })
@@ -85,6 +104,27 @@ export default function TrackerPage() {
           + Add Sample
         </button>
       </div>
+
+      {/* Search + Sort */}
+      {programs.length > 0 && (
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search saved programs..."
+            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none"
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-xs text-white outline-none"
+          >
+            <option value="deadline">Sort by Deadline</option>
+            <option value="name">Sort by Name</option>
+          </select>
+        </div>
+      )}
 
       {/* Approaching deadlines */}
       {approachingDeadlines.length > 0 && (
@@ -127,10 +167,10 @@ export default function TrackerPage() {
                 className="mb-3 text-sm font-semibold"
                 style={{ color: col.color }}
               >
-                {col.label} ({programs.filter((p) => p.stage === col.key).length})
+                {col.label} ({filteredPrograms.filter((p) => p.stage === col.key).length})
               </h3>
               <div className="space-y-2">
-                {programs
+                {filteredPrograms
                   .filter((p) => p.stage === col.key)
                   .map((p) => {
                     const days = daysUntil(p.deadline)
