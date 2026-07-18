@@ -19,20 +19,23 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
-              className={`text-sm transition-colors ${
-                pathname.startsWith(item.href)
-                  ? 'text-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`text-sm transition-colors ${
+                  isActive
+                    ? 'text-white'
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="flex items-center gap-3">

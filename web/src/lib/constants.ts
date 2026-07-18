@@ -53,6 +53,7 @@ export const PROGRAM_FIELDS = [
 ]
 
 export const NAV_ITEMS = [
+  { label: 'Home', href: '/' },
   { label: 'Universities', href: '/universities' },
   { label: 'Map', href: '/map' },
   { label: 'Matching', href: '/matching' },
