@@ -10,7 +10,7 @@ export const REGIONS: { key: Region; label: string; color: string }[] = [
 
 export const UNIVERSITY_TYPES: { key: UniversityType; label: string }[] = [
   { key: 'Federal', label: 'Federal' },
-  { key: 'State', label: 'Estadual' },
+  { key: 'State', label: 'State' },
 ]
 
 export const STATES_BY_REGION: Record<Region, string[]> = {
@@ -57,4 +57,5 @@ export const NAV_ITEMS = [
   { label: 'Map', href: '/map' },
   { label: 'Matching', href: '/matching' },
   { label: 'My Tracker', href: '/tracker' },
+  { label: 'About', href: '/about' },
 ]

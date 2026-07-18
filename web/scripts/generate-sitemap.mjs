@@ -22,7 +22,7 @@ for (const m of nameMatches) {
 }
 
 const baseUrl = 'https://kehra-edubrazil.netlify.app'
-const staticPages = ['', 'universities', 'map', 'matching', 'tracker']
+const staticPages = ['', 'universities', 'map', 'matching', 'tracker', 'about']
 
 let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for (const p of staticPages) {
