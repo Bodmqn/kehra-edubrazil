@@ -68,7 +68,7 @@ export default function HomePage() {
 
         {/* Stats */}
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-live="polite" aria-label="Live statistics">
             {statItems.map((stat) => (
               <div
                 key={stat.label}

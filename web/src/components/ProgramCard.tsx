@@ -83,6 +83,7 @@ export default function ProgramCard({ program }: ProgramCardProps) {
                 <span
                   className="text-xs font-medium"
                   style={{ color: urgency.color }}
+                  aria-live="polite"
                 >
                   {urgency.label}
                 </span>

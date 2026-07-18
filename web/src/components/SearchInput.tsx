@@ -4,12 +4,14 @@ interface SearchInputProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string
+  label?: string
 }
 
 export default function SearchInput({
   value,
   onChange,
   placeholder = 'Search...',
+  label,
 }: SearchInputProps) {
   return (
     <div className="relative">
@@ -18,6 +20,7 @@ export default function SearchInput({
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"
@@ -31,6 +34,7 @@ export default function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-label={label || placeholder}
         className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] py-2.5 pl-10 pr-4 text-sm text-white placeholder-[var(--text-muted)] outline-none transition-colors focus:border-[var(--bg-primary)]/50"
       />
     </div>

@@ -98,22 +98,24 @@ export default function MapPage() {
           {REGIONS.map((r) => (
             <button
               key={r.key}
-              onClick={() => setSelectedRegion(r.key)}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                selectedRegion === r.key
-                  ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              {r.key}
-            </button>
-          ))}
+            onClick={() => setSelectedRegion(r.key)}
+            aria-pressed={selectedRegion === r.key}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+              selectedRegion === r.key
+                ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+            }`}
+          >
+            {r.key}
+          </button>
+        ))}
         </div>
         <div className="flex flex-wrap gap-2">
           {UNIVERSITY_TYPES.map((t) => (
             <button
               key={t.key}
               onClick={() => setSelectedType(selectedType === t.key ? '' : t.key)}
+              aria-pressed={selectedType === t.key}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                 selectedType === t.key
                   ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'

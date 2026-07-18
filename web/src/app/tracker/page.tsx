@@ -150,7 +150,7 @@ export default function TrackerPage() {
 
       {/* Kanban board */}
       {programs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-card)] py-20">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg-card)] py-20" role="alert">
           <p className="text-sm text-[var(--text-muted)]">
             No programs saved yet. Browse universities and save programs to track them here.
           </p>

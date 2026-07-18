@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import SkipLink from '@/components/SkipLink'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -44,8 +45,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-[var(--bg-dark)] font-sans text-white">
+        <SkipLink />
         <Navbar />
-        <main className="pt-16">{children}</main>
+        <main id="main-content" className="pt-16" tabIndex={-1}>
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

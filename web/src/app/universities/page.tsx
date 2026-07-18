@@ -74,6 +74,7 @@ export default function UniversitiesPage() {
             <button
               key={region.key}
               onClick={() => toggleRegion(region.key)}
+              aria-pressed={selectedRegions.includes(region.key)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                 selectedRegions.includes(region.key)
                   ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'

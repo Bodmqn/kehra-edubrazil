@@ -173,6 +173,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     <button
                       key={level}
                       onClick={() => setLevelFilter(level)}
+                      aria-pressed={levelFilter === level}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                         levelFilter === level
                           ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
@@ -193,6 +194,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                   </select>
                   <button
                     onClick={() => setShowOpenOnly(!showOpenOnly)}
+                    aria-pressed={showOpenOnly}
                     className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                       showOpenOnly
                         ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'

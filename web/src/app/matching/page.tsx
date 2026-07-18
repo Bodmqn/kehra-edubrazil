@@ -277,7 +277,7 @@ export default function MatchingPage() {
       )}
 
       {showResults && !loading && results.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16">
+        <div className="flex flex-col items-center justify-center py-16" role="alert">
           <p className="text-sm text-[var(--text-muted)]">
             No programs match your criteria. Try broadening your filters.
           </p>
