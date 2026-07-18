@@ -7,9 +7,10 @@ import Badge from './Badge'
 
 interface ProgramCardProps {
   program: Program
+  universityName?: string
 }
 
-export default function ProgramCard({ program }: ProgramCardProps) {
+export default function ProgramCard({ program, universityName }: ProgramCardProps) {
   const [mounted, setMounted] = useState(false)
   const [saved, setSaved] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
@@ -50,7 +51,7 @@ export default function ProgramCard({ program }: ProgramCardProps) {
       list.push({
         id: program.id,
         name: program.name,
-        university: '',
+        university: universityName || '',
         deadline: program.deadline,
         stage: 'saved',
       })

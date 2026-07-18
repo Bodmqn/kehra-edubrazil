@@ -120,7 +120,7 @@ export function useAllPrograms() {
       try {
         const { data: programs, error } = await supabase
           .from('programs')
-          .select('*, universities(name, acronym, region)')
+          .select('*, universities(name, acronym, region, type)')
           .order('deadline', { ascending: true })
 
         if (error) throw error
@@ -140,6 +140,7 @@ export function useAllPrograms() {
             university_name: (uni?.name as string) ?? '',
             university_acronym: (uni?.acronym as string) ?? '',
             university_region: (uni?.region as string) ?? '',
+            university_type: (uni?.type as string) ?? '',
           }
         })
 

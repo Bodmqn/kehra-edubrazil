@@ -36,6 +36,7 @@ export default function MatchingPage() {
 
     allPrograms.forEach((p) => {
       if (region && p.university_region !== region) return
+      if (type && p.university_type !== type) return
 
       let score = 50
       if (field && p.field?.toLowerCase().includes(field.toLowerCase())) score += 30
@@ -54,15 +55,13 @@ export default function MatchingPage() {
         level: p.level,
         field: p.field || 'General',
         region: p.university_region,
-        matchScore: Math.min(score + Math.floor(Math.random() * 15), 99),
+        matchScore: Math.min(score + (level === 'Ambos' ? 5 : 0), 99),
         deadline: p.deadline,
       })
     })
 
     return matches.sort((a, b) => b.matchScore - a.matchScore).slice(0, 20)
-  }, [allPrograms, field, level, region])
-
-  const canSearch = field || level || region || type
+  }, [allPrograms, field, level, region, type])
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -77,8 +76,10 @@ export default function MatchingPage() {
       <div className="mb-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <div className="mb-6 flex items-center gap-2">
           {[1, 2, 3, 4].map((s) => (
-            <div key={s} className="flex items-center gap-2">
+            <div key={s} className="flex items-center gap-2" role="listitem">
               <div
+                role="step"
+                aria-current={step === s ? 'step' : undefined}
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
                   step >= s
                     ? 'bg-[var(--bg-primary)] text-white'

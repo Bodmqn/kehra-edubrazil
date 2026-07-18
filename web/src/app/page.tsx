@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
-import { formatDate } from '@/lib/utils'
+import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
+import { formatDate, slugify } from '@/lib/utils'
 import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
 import type { ProgramWithUniversity } from '@/lib/types'
@@ -31,7 +31,7 @@ export default function HomePage() {
     { value: stats.universityCount.toString(), label: 'Universities' },
     { value: stats.programCount.toString(), label: 'Graduate Programs' },
     { value: stats.openProgramCount.toString(), label: 'Open Now' },
-    { value: '26+1', label: 'States + DF' },
+    { value: `${ALL_STATES.length}`, label: 'States + DF' },
   ]
 
   return (
@@ -103,7 +103,7 @@ export default function HomePage() {
             {latestPrograms.map((p) => (
               <Link
                 key={p.id}
-                href={`/universities/${p.university_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`}
+                href={`/universities/${slugify(p.university_name)}`}
                 className="group rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/30"
               >
                 <div className="mb-2 flex items-start justify-between">

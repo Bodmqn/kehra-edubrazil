@@ -51,6 +51,7 @@ export interface ProgramWithUniversity extends Program {
   university_name: string
   university_acronym: string
   university_region: string
+  university_type: string
 }
 
 export interface ScrapeLog {

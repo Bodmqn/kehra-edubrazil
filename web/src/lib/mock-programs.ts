@@ -55,7 +55,7 @@ export function getMockPrograms(acronym: string, universityId: string): Program[
       field: p.field,
       deadline: randomDate(new Date('2026-08-01'), new Date('2026-12-15')),
       status: isOpen ? 'Aberto' : Math.random() > 0.5 ? 'Fechado' : 'Em Breve',
-      edital_url: 'https://example.com/edital',
+      edital_url: null,
       scraped_at: new Date().toISOString(),
     }
   })

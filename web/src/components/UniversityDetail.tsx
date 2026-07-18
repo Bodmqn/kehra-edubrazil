@@ -10,14 +10,11 @@ import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import SearchInput from '@/components/SearchInput'
 import ProgramCard from '@/components/ProgramCard'
+import { REGIONS } from '@/lib/constants'
 
-const regionColors: Record<string, string> = {
-  Norte: '#009739',
-  Nordeste: '#FEDD00',
-  'Centro-Oeste': '#002776',
-  Sudeste: '#FF6B35',
-  Sul: '#7C3AED',
-}
+const regionColors: Record<string, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.key, r.color])
+)
 
 const TABS = [
   { key: 'programs', label: 'Programs' },
@@ -229,7 +226,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
               ) : (
                 <div className="space-y-3">
                   {filteredPrograms.map((program) => (
-                    <ProgramCard key={program.id} program={program} />
+                    <ProgramCard key={program.id} program={program} universityName={`${university.name} (${university.acronym})`} />
                   ))}
                 </div>
               )}
@@ -243,10 +240,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                 <h3 className="mb-2 text-lg font-semibold text-white">About {university.name}</h3>
                 <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
                   {details?.about_text ||
-                    `${university.name} (${university.acronym}) is a ${university.type.toLowerCase()} university
-                  located in ${university.state}, ${university.region} region of Brazil. It offers
-                  graduate programs at the Masters (Mestrado) and PhD (Doutorado) levels through its various
-                  departments and research centers.`}
+                    `${university.name} (${university.acronym}) is a ${university.type.toLowerCase()} university located in ${university.state}, ${university.region} region of Brazil. It offers graduate programs at the Masters (Mestrado) and PhD (Doutorado) levels through its various departments and research centers.`}
                 </p>
                 {details?.wikipedia_url && (
                   <a

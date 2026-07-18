@@ -1,7 +1,7 @@
 import type { University } from './types'
 
 export const universities: University[] = [
-  { id: '1', sno: 1, name: 'Universidade Estadual de Roraima', acronym: 'UERR', region: 'Norte', state: 'Roraima', type: 'State', sigaa_url: 'Edital - UERR Univesity of Roraima', school_url: 'https://uerr.edu.br/', lat: null, lng: null, logo_url: null },
+  { id: '1', sno: 1, name: 'Universidade Estadual de Roraima', acronym: 'UERR', region: 'Norte', state: 'Roraima', type: 'State', sigaa_url: 'https://uerr.edu.br/editais/', school_url: 'https://uerr.edu.br/', lat: null, lng: null, logo_url: null },
   { id: '2', sno: 2, name: 'Universidade Estadual do Tocantins', acronym: 'UNITINS', region: 'Norte', state: 'Tocantins', type: 'State', sigaa_url: 'https://www.unitins.br/concursos/publico', school_url: 'https://www.unitins.br/', lat: null, lng: null, logo_url: null },
   { id: '3', sno: 3, name: 'Universidade Federal Rural da Amazônia', acronym: 'UFRA', region: 'Norte', state: 'Pará', type: 'Federal', sigaa_url: 'https://sigaa.ufra.edu.br/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-stricto', school_url: 'https://www.ufra.edu.br/', lat: null, lng: null, logo_url: null },
   { id: '4', sno: 4, name: 'Universidade Federal de Rondônia', acronym: 'UNIR', region: 'Norte', state: 'Rondônia', type: 'Federal', sigaa_url: 'https://sigaa.unir.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S', school_url: 'https://www.unir.br/', lat: null, lng: null, logo_url: null },
