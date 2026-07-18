@@ -145,7 +145,7 @@ export default function MapPage() {
             src="/brazil.svg"
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full select-none opacity-15"
+            className="pointer-events-none absolute inset-0 h-full w-full select-none opacity-30"
           />
           {filtered.map((u) => {
             const coord = stateCoords[u.state] || regionCoords[u.region]
