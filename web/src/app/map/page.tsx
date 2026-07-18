@@ -9,52 +9,45 @@ import SearchInput from '@/components/SearchInput'
 import Link from 'next/link'
 import { usePageMeta } from '@/lib/usePageMeta'
 
-const regionCoords: Record<string, { lat: number; lng: number }> = {
-  Norte: { lat: -3.4653, lng: -62.2159 },
-  Nordeste: { lat: -8.0476, lng: -39.5269 },
-  'Centro-Oeste': { lat: -15.7801, lng: -47.9292 },
-  Sudeste: { lat: -22.9068, lng: -43.1729 },
-  Sul: { lat: -27.5954, lng: -48.5482 },
+const stateSvgCoords: Record<string, { x: number; y: number }> = {
+  'Acre': { x: 136.5, y: 345.5 },
+  'Alagoas': { x: 800.6, y: 345.3 },
+  'Amapá': { x: 492.7, y: 124 },
+  'Amazonas': { x: 215.2, y: 233.1 },
+  'Bahia': { x: 697.6, y: 397.7 },
+  'Bahia/Pernambuco/Piauí': { x: 709.57, y: 341.33 },
+  'Ceará': { x: 741, y: 247.1 },
+  'Ceará/Bahia': { x: 719.3, y: 322.4 },
+  'Distrito Federal': { x: 573.7, y: 469.3 },
+  'Espírito Santo': { x: 724.2, y: 542.5 },
+  'Goiás': { x: 526.6, y: 487.8 },
+  'Maranhão': { x: 622.9, y: 254.2 },
+  'Mato Grosso': { x: 409.9, y: 419.8 },
+  'Mato Grosso do Sul': { x: 430.2, y: 562.7 },
+  'Minas Gerais': { x: 644.1, y: 527 },
+  'Pará': { x: 461.3, y: 259.6 },
+  'Paraíba': { x: 811.1, y: 291.7 },
+  'Paraná': { x: 489.8, y: 658.5 },
+  'Pernambuco': { x: 759.9, y: 315.3 },
+  'Piauí': { x: 671.2, y: 311 },
+  'Rio de Janeiro': { x: 680.3, y: 610 },
+  'Rio Grande do Norte': { x: 798, y: 263.9 },
+  'Rio Grande do Sul': { x: 461.1, y: 773.3 },
+  'Rio Grande do Sul/Santa Catarina/Paraná': { x: 492.97, y: 716.77 },
+  'Rondônia': { x: 259.8, y: 363.7 },
+  'Roraima': { x: 300.5, y: 101 },
+  'Santa Catarina': { x: 528, y: 718.5 },
+  'São Paulo': { x: 560.9, y: 605 },
+  'Sergipe': { x: 784.8, y: 359.8 },
+  'Tocantins': { x: 562.1, y: 361.7 },
 }
 
-const stateCoords: Record<string, { lat: number; lng: number }> = {
-  'Acre': { lat: -9.974, lng: -67.807 },
-  'Alagoas': { lat: -9.571, lng: -35.773 },
-  'Amapá': { lat: 0.035, lng: -51.050 },
-  'Amazonas': { lat: -3.118, lng: -60.021 },
-  'Bahia': { lat: -12.971, lng: -38.501 },
-  'Ceará': { lat: -3.717, lng: -38.543 },
-  'Ceará/Bahia': { lat: -4.004, lng: -38.015 },
-  'Distrito Federal': { lat: -15.780, lng: -47.930 },
-  'Espírito Santo': { lat: -20.315, lng: -40.308 },
-  'Goiás': { lat: -16.679, lng: -49.255 },
-  'Maranhão': { lat: -2.529, lng: -44.254 },
-  'Mato Grosso': { lat: -15.596, lng: -56.097 },
-  'Mato Grosso do Sul': { lat: -20.443, lng: -54.647 },
-  'Minas Gerais': { lat: -19.924, lng: -43.935 },
-  'Pará': { lat: -1.456, lng: -48.504 },
-  'Paraíba': { lat: -7.119, lng: -34.882 },
-  'Paraná': { lat: -25.428, lng: -49.267 },
-  'Pernambuco': { lat: -8.057, lng: -34.883 },
-  'Piauí': { lat: -5.092, lng: -42.803 },
-  'Rio de Janeiro': { lat: -22.907, lng: -43.173 },
-  'Rio Grande do Norte': { lat: -5.839, lng: -35.201 },
-  'Rio Grande do Sul': { lat: -30.035, lng: -51.218 },
-  'Rio Grande do Sul/Santa Catarina/Paraná': { lat: -27.097, lng: -52.618 },
-  'Rondônia': { lat: -8.761, lng: -63.903 },
-  'Roraima': { lat: 2.819, lng: -60.672 },
-  'Santa Catarina': { lat: -27.595, lng: -48.548 },
-  'São Paulo': { lat: -23.550, lng: -46.633 },
-  'Sergipe': { lat: -10.947, lng: -37.073 },
-  'Tocantins': { lat: -10.175, lng: -48.332 },
-  'Bahia/Pernambuco/Piauí': { lat: -9.400, lng: -40.500 },
-}
-
-function toPercent(lat: number, lng: number) {
-  return {
-    left: `${((lng + 75) / 75) * 100}%`,
-    top: `${((lat + 35) / 50) * 100}%`,
-  }
+const regionSvgCoords: Record<string, { x: number; y: number }> = {
+  Norte: { x: 346.87, y: 255.51 },
+  Nordeste: { x: 743.01, y: 309.56 },
+  'Centro-Oeste': { x: 485.1, y: 484.9 },
+  Sudeste: { x: 652.38, y: 571.13 },
+  Sul: { x: 492.97, y: 716.77 },
 }
 
 const SHOW_LABELS_THRESHOLD = 15
@@ -148,9 +141,8 @@ export default function MapPage() {
             className="pointer-events-none absolute inset-0 h-full w-full select-none opacity-30"
           />
           {filtered.map((u) => {
-            const coord = stateCoords[u.state] || regionCoords[u.region]
+            const coord = stateSvgCoords[u.state] || regionSvgCoords[u.region]
             if (!coord) return null
-            const pos = toPercent(coord.lat, coord.lng)
             const isHovered = hoveredUni === u.id
 
             return (
@@ -158,7 +150,7 @@ export default function MapPage() {
                 key={u.id}
                 href={`/universities/${slugify(u.name)}`}
                 className="absolute z-10"
-                style={{ left: pos.left, top: pos.top }}
+                style={{ left: `${(coord.x / 1000) * 100}%`, top: `${(coord.y / 912) * 100}%` }}
                 aria-label={u.name}
                 onMouseEnter={() => setHoveredUni(u.id)}
                 onMouseLeave={() => setHoveredUni(null)}
@@ -193,13 +185,13 @@ export default function MapPage() {
 
           {/* Region labels */}
           {REGIONS.map((r) => {
-            const c = regionCoords[r.key]
-            const pos = toPercent(c.lat, c.lng)
+            const c = regionSvgCoords[r.key]
+            if (!c) return null
             return (
               <div
                 key={r.key}
                 className="absolute text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] pointer-events-none"
-                style={{ left: pos.left, top: pos.top }}
+                style={{ left: `${(c.x / 1000) * 100}%`, top: `${(c.y / 912) * 100}%` }}
               >
                 {r.key}
               </div>
