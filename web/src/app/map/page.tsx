@@ -140,22 +140,13 @@ export default function MapPage() {
       {/* Map */}
       <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
         <div className="relative flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/5 to-[var(--bg-secondary)]/5">
-          {/* Brazil outline background */}
-          <svg
-            className="pointer-events-none absolute inset-0 h-full w-full select-none opacity-20"
-            viewBox="0 0 1000 912"
-            preserveAspectRatio="xMidYMid meet"
-            fill="none"
+          {/* Brazil state outlines background */}
+          <img
+            src="/brazil.svg"
+            alt=""
             aria-hidden="true"
-          >
-            <path
-              d="M66.7 565.4 L93.3 674.9 L146.7 711.4 L200 711.4 L253.3 702.2 L280 693.1 L306.7 693.1 L333.3 638.4 L373.3 620.2 L413.3 601.9 L440 592.8 L453.3 583.7 L480 583.7 L506.7 565.4 L520 547.2 L533.3 510.7 L533.3 474.2 L506.7 438.0 L493.3 419.5 L480 383.0 L480 346.6 L466.7 310.1 L453.3 255.4 L426.7 218.9 L400 182.4 L346.7 164.2 L346.7 127.7 L320 91.2 L320 73.0 L306.7 54.7 L293.3 36.5 L280 36.5 L253.3 73.0 L240 91.2 L253.3 127.7 L280 182.4 L266.7 237.1 L226.7 273.6 L226.7 292.0 L186.7 328.4 L173.3 346.6 L173.3 401.3 L146.7 438.0 L133.3 456.0 L106.7 474.2 L80.0 474.2 L53.3 510.7 L40.0 565.4 L66.7 565.4 Z"
-              stroke="var(--bg-secondary)"
-              strokeWidth="1"
-              fill="none"
-              className="opacity-40"
-            />
-          </svg>
+            className="pointer-events-none absolute inset-0 h-full w-full select-none opacity-15"
+          />
           {filtered.map((u) => {
             const coord = stateCoords[u.state] || regionCoords[u.region]
             if (!coord) return null
