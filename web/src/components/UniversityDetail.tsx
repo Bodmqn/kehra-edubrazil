@@ -41,12 +41,12 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
   const [levelFilter, setLevelFilter] = useState<'all' | 'Mestrado' | 'Doutorado'>('all')
   const [showOpenOnly, setShowOpenOnly] = useState(true)
 
-  const programs =
-    livePrograms.length > 0
-      ? livePrograms
-      : university
-        ? getMockPrograms(university.acronym, university.id)
-        : []
+  const showMockPrograms = !programsLoading && livePrograms.length === 0
+  const programs = livePrograms.length > 0
+    ? livePrograms
+    : showMockPrograms && university
+      ? getMockPrograms(university.acronym, university.id)
+      : []
 
   const filteredPrograms = useMemo(() => {
     return programs.filter((p) => {
