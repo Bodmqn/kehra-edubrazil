@@ -35,9 +35,16 @@ class SIGAAParser:
             "User-Agent": "KehraEduBrazil/1.0 (University scraper; contact@kehra.com.br)"
         })
 
+    def _execute(self, query) -> dict:
+        resp = query.execute()
+        if resp.error:
+            logger.error(f"Supabase error: {resp.error}")
+            raise RuntimeError(str(resp.error))
+        return resp
+
     def fetch_universities(self) -> list[dict]:
         """Fetch all universities from Supabase that have SIGAA URLs."""
-        response = self.supabase.table("universities").select("*").execute()
+        response = self._execute(self.supabase.table("universities").select("*"))
         return response.data
 
     def is_sigaa_url(self, url: str) -> bool:
@@ -162,37 +169,44 @@ class SIGAAParser:
                 programs = self.parse_listing_page(uni["sigaa_url"])
                 logger.info(f"  Found {len(programs)} programs")
 
-                for prog in programs:
-                    self.supabase.table("programs").upsert({
-                        "university_id": uni["id"],
-                        "name": prog["name"],
-                        "level": prog["level"],
-                        "field": prog["field"],
-                        "deadline": prog["deadline"],
-                        "status": prog["status"],
-                        "edital_url": prog["edital_url"],
-                        "scraped_at": datetime.utcnow().isoformat(),
-                    }).execute()
+                if programs:
+                    rows = [
+                        {
+                            "university_id": uni["id"],
+                            "name": p["name"],
+                            "level": p["level"],
+                            "field": p["field"],
+                            "deadline": p["deadline"],
+                            "status": p["status"],
+                            "edital_url": p["edital_url"],
+                            "scraped_at": datetime.utcnow().isoformat(),
+                        }
+                        for p in programs
+                    ]
+                    self._execute(self.supabase.table("programs").upsert(rows))
 
                 # Log success
-                self.supabase.table("scrape_logs").insert({
+                self._execute(self.supabase.table("scrape_logs").insert({
                     "university_id": uni["id"],
                     "status": "success" if programs else "partial",
                     "programs_found": len(programs),
                     "scraped_at": datetime.utcnow().isoformat(),
-                }).execute()
+                }))
 
                 total_programs += len(programs)
 
             except Exception as e:
                 logger.error(f"  Error scraping {uni['name']}: {e}")
-                self.supabase.table("scrape_logs").insert({
-                    "university_id": uni["id"],
-                    "status": "error",
-                    "programs_found": 0,
-                    "errors": str(e),
-                    "scraped_at": datetime.utcnow().isoformat(),
-                }).execute()
+                try:
+                    self._execute(self.supabase.table("scrape_logs").insert({
+                        "university_id": uni["id"],
+                        "status": "error",
+                        "programs_found": 0,
+                        "errors": str(e),
+                        "scraped_at": datetime.utcnow().isoformat(),
+                    }))
+                except Exception as log_e:
+                    logger.error(f"  Failed to log scrape error: {log_e}")
 
         logger.info(f"Done. Total programs scraped: {total_programs}")
 

@@ -5,10 +5,11 @@ import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import SearchInput from '@/components/SearchInput'
 import UniversityCard from '@/components/UniversityCard'
-import { useUniversities } from '@/lib/useSupabaseData'
+import { useUniversities, useProgramCounts } from '@/lib/useSupabaseData'
 
 export default function UniversitiesPage() {
   const { universities, loading } = useUniversities()
+  const programCounts = useProgramCounts()
   const [search, setSearch] = useState('')
   const [selectedRegions, setSelectedRegions] = useState<Region[]>([])
   const [selectedTypes, setSelectedTypes] = useState<UniversityType[]>([])
@@ -150,7 +151,7 @@ export default function UniversitiesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((u) => (
-            <UniversityCard key={u.id} university={u} programCount={Math.floor(Math.random() * 15) + 1} />
+            <UniversityCard key={u.id} university={u} programCount={programCounts[u.id]} />
           ))}
         </div>
       )}

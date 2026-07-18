@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { universities as localUniversities } from '@/lib/data'
 import { slugify } from '@/lib/utils'
 import { getMockPrograms } from '@/lib/mock-programs'
 import { useUniversities, usePrograms, useUniversityDetails } from '@/lib/useSupabaseData'
+import type { University } from '@/lib/types'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import SearchInput from '@/components/SearchInput'
@@ -27,11 +27,13 @@ const TABS = [
 
 interface UniversityDetailProps {
   slug: string
+  fallbackUniversity: University | null
 }
 
-export default function UniversityDetail({ slug }: UniversityDetailProps) {
-  const { universities: liveUniversities } = useUniversities()
-  const university = liveUniversities.find((u) => slugify(u.name) === slug)
+export default function UniversityDetail({ slug, fallbackUniversity }: UniversityDetailProps) {
+  const { universities: liveUniversities, loading: liveLoading } = useUniversities()
+  const liveUniversity = liveUniversities.find((u) => slugify(u.name) === slug)
+  const university = liveUniversity ?? fallbackUniversity
   const { programs: livePrograms, loading: programsLoading } = usePrograms(university?.id ?? null)
   const { details } = useUniversityDetails(university?.id ?? null)
   const [activeTab, setActiveTab] = useState('programs')

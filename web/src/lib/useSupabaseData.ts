@@ -84,6 +84,33 @@ export function usePrograms(universityId: string | null) {
   return { programs: data, loading }
 }
 
+export function useProgramCounts() {
+  const [counts, setCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    async function fetchCounts() {
+      try {
+        const { data, error } = await supabase
+          .from('programs')
+          .select('university_id')
+
+        if (error) throw error
+
+        const map: Record<string, number> = {}
+        for (const row of data as { university_id: string }[]) {
+          map[row.university_id] = (map[row.university_id] || 0) + 1
+        }
+        setCounts(map)
+      } catch {
+        setCounts({})
+      }
+    }
+    fetchCounts()
+  }, [])
+
+  return counts
+}
+
 export function useUniversityDetails(universityId: string | null) {
   const [data, setData] = useState<UniversityDetail | null>(null)
   const [loading, setLoading] = useState(false)
