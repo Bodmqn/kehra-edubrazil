@@ -190,8 +190,11 @@ export default function MapPage() {
             return (
               <div
                 key={r.key}
-                className="absolute text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] pointer-events-none"
-                style={{ left: `${(c.x / 1000) * 100}%`, top: `${(c.y / 912) * 100}%` }}
+                className="absolute text-sm font-bold uppercase tracking-widest text-white/85 drop-shadow-sm pointer-events-none"
+                style={{
+                  left: `${((c.x + 10) / 1000) * 100}%`,
+                  top: `${((c.y - 25) / 912) * 100}%`,
+                }}
               >
                 {r.key}
               </div>
