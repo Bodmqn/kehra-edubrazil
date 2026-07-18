@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
-import { formatDate, slugify } from '@/lib/utils'
+import { formatDate, slugify, daysUntil, getDeadlineUrgency } from '@/lib/utils'
 import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
 import type { ProgramWithUniversity } from '@/lib/types'
@@ -23,7 +23,15 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!programsLoading && allPrograms.length > 0) {
-      setLatestPrograms(allPrograms.slice(0, 6))
+      const withDeadlines = allPrograms.filter(p => p.deadline !== null)
+      const seen = new Set<string>()
+      const diversified = withDeadlines.filter(p => {
+        if (seen.size >= 6) return false
+        if (seen.has(p.university_id)) return false
+        seen.add(p.university_id)
+        return true
+      })
+      setLatestPrograms(diversified.length > 0 ? diversified : allPrograms.slice(0, 6))
     }
   }, [allPrograms, programsLoading])
 
@@ -100,7 +108,11 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {latestPrograms.map((p) => (
+            {latestPrograms.map((p) => {
+              const regColor = REGIONS.find(r => r.key === p.university_region)?.color ?? '#666'
+              const days = daysUntil(p.deadline)
+              const urgency = getDeadlineUrgency(days)
+              return (
               <Link
                 key={p.id}
                 href={`/universities/${slugify(p.university_name)}`}
@@ -108,9 +120,15 @@ export default function HomePage() {
               >
                 <div className="mb-2 flex items-start justify-between">
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors truncate">
-                      {p.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: regColor }}
+                      />
+                      <h3 className="text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors truncate">
+                        {p.name}
+                      </h3>
+                    </div>
                     {p.level && (
                       <p className="mt-0.5 text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                         {p.level}{p.field ? ` · ${p.field}` : ''}
@@ -133,12 +151,13 @@ export default function HomePage() {
                   {p.university_name} ({p.university_acronym})
                 </p>
                 {p.deadline && (
-                  <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                    Deadline: {formatDate(p.deadline)}
+                  <p className="mt-2 text-xs" style={{ color: urgency.color }}>
+                    {urgency.label} · {formatDate(p.deadline)}
                   </p>
                 )}
               </Link>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}
