@@ -22,7 +22,7 @@ export interface Program {
   deadline: string | null
   status: 'Aberto' | 'Fechado' | 'Em Breve'
   edital_url: string | null
-  scraped_at: string
+  scraped_at: string | null
 }
 
 export interface UniversityDetail {
@@ -46,6 +46,12 @@ export interface StudyGuide {
 export type Region = 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul'
 
 export type UniversityType = 'Federal' | 'State'
+
+export interface ProgramWithUniversity extends Program {
+  university_name: string
+  university_acronym: string
+  university_region: string
+}
 
 export interface ScrapeLog {
   id: string

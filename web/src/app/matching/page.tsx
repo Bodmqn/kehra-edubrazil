@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { universities } from '@/lib/data'
-import { getMockPrograms } from '@/lib/mock-programs'
+import { useAllPrograms } from '@/lib/useSupabaseData'
 import { REGIONS, PROGRAM_FIELDS, UNIVERSITY_TYPES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import Link from 'next/link'
@@ -21,6 +20,7 @@ interface ProgramMatch {
 }
 
 export default function MatchingPage() {
+  const { programs: allPrograms, loading } = useAllPrograms()
   const [step, setStep] = useState(1)
   const [field, setField] = useState('')
   const [level, setLevel] = useState<'Mestrado' | 'Doutorado' | 'Ambos' | ''>('')
@@ -31,40 +31,34 @@ export default function MatchingPage() {
 
   const results = useMemo((): ProgramMatch[] => {
     const matches: ProgramMatch[] = []
-    const filteredUnis = universities.filter((u) => {
-      if (region && u.region !== region) return false
-      if (type && u.type !== type) return false
-      return true
-    })
 
-    filteredUnis.forEach((u) => {
-      const programs = getMockPrograms(u.acronym, u.id)
-      programs.forEach((p) => {
-        let score = 50
-        if (field && p.field?.toLowerCase().includes(field.toLowerCase())) score += 30
-        if (level && level !== 'Ambos' && p.level === level) score += 20
-        if (level === 'Ambos') score += 10
-        if (!field) score += 15
+    allPrograms.forEach((p) => {
+      if (region && p.university_region !== region) return
 
-        if (field && !p.field?.toLowerCase().includes(field.toLowerCase())) return
-        if (level && level !== 'Ambos' && p.level !== level) return
+      let score = 50
+      if (field && p.field?.toLowerCase().includes(field.toLowerCase())) score += 30
+      if (level && level !== 'Ambos' && p.level === level) score += 20
+      if (level === 'Ambos') score += 10
+      if (!field) score += 15
 
-        matches.push({
-          programName: p.name,
-          universityName: u.name,
-          universityAcronym: u.acronym,
-          universitySlug: slugify(u.name),
-          level: p.level,
-          field: p.field || 'General',
-          region: u.region,
-          matchScore: Math.min(score + Math.floor(Math.random() * 15), 99),
-          deadline: p.deadline,
-        })
+      if (field && !p.field?.toLowerCase().includes(field.toLowerCase())) return
+      if (level && level !== 'Ambos' && p.level !== level) return
+
+      matches.push({
+        programName: p.name,
+        universityName: p.university_name,
+        universityAcronym: p.university_acronym,
+        universitySlug: slugify(p.university_name),
+        level: p.level,
+        field: p.field || 'General',
+        region: p.university_region,
+        matchScore: Math.min(score + Math.floor(Math.random() * 15), 99),
+        deadline: p.deadline,
       })
     })
 
     return matches.sort((a, b) => b.matchScore - a.matchScore).slice(0, 20)
-  }, [field, level, region, type])
+  }, [allPrograms, field, level, region])
 
   const canSearch = field || level || region || type
 
@@ -229,11 +223,22 @@ export default function MatchingPage() {
         </p>
       </div>
 
+      {/* Loading */}
+      {showResults && loading && (
+        <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--bg-primary)]" />
+            <p className="text-xs text-[var(--text-muted)]">Loading programs...</p>
+          </div>
+        </div>
+      )}
+
       {/* Results */}
-      {showResults && results.length > 0 && (
+      {showResults && !loading && results.length > 0 && (
         <div>
           <h2 className="mb-4 text-lg font-semibold text-white">
-            {results.length} program{results.length !== 1 ? 's' : ''} found
+            {results.length} program{results.length !== 1 ? 's' : ''} found from{' '}
+            {allPrograms.length} total across Brazil
           </h2>
           <div className="space-y-3">
             {results.map((r, i) => (
@@ -269,7 +274,7 @@ export default function MatchingPage() {
         </div>
       )}
 
-      {showResults && results.length === 0 && (
+      {showResults && !loading && results.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16">
           <p className="text-sm text-[var(--text-muted)]">
             No programs match your criteria. Try broadening your filters.

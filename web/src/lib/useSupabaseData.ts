@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { universities as fallbackUniversities } from './data'
-import type { University, Program, UniversityDetail } from './types'
+import type { University, Program, ProgramWithUniversity, UniversityDetail } from './types'
 
 export function useUniversities() {
   const [data, setData] = useState<University[]>(fallbackUniversities)
@@ -109,6 +109,52 @@ export function useProgramCounts() {
   }, [])
 
   return counts
+}
+
+export function useAllPrograms() {
+  const [data, setData] = useState<ProgramWithUniversity[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data: programs, error } = await supabase
+          .from('programs')
+          .select('*, universities(name, acronym, region)')
+          .order('deadline', { ascending: true })
+
+        if (error) throw error
+
+        const mapped = (programs as Record<string, unknown>[]).map((p) => {
+          const uni = p.universities as Record<string, unknown> | null
+          return {
+            id: p.id as string,
+            university_id: p.university_id as string,
+            name: p.name as string,
+            level: p.level as Program['level'],
+            field: p.field as string | null,
+            deadline: p.deadline as string | null,
+            status: p.status as Program['status'],
+            edital_url: p.edital_url as string | null,
+            scraped_at: p.scraped_at as string | null,
+            university_name: (uni?.name as string) ?? '',
+            university_acronym: (uni?.acronym as string) ?? '',
+            university_region: (uni?.region as string) ?? '',
+          }
+        })
+
+        setData(mapped)
+      } catch {
+        setData([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  return { programs: data, loading }
 }
 
 export function useUniversityDetails(universityId: string | null) {
