@@ -6,8 +6,10 @@ import type { Region, UniversityType } from '@/lib/types'
 import SearchInput from '@/components/SearchInput'
 import UniversityCard from '@/components/UniversityCard'
 import { useUniversities, useProgramCounts } from '@/lib/useSupabaseData'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 export default function UniversitiesPage() {
+  usePageMeta('Universities', 'Browse all Brazilian universities offering graduate programs')
   const { universities, loading } = useUniversities()
   const programCounts = useProgramCounts()
   const [search, setSearch] = useState('')
@@ -129,31 +131,49 @@ export default function UniversitiesPage() {
       </div>
 
       {/* Results */}
-      <p className="mb-4 text-xs text-[var(--text-muted)]">
-        Showing {filtered.length} of {universities.length} universities
-      </p>
-
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-sm text-[var(--text-muted)]">No universities match your filters</p>
-          <button
-            onClick={() => {
-              setSearch('')
-              setSelectedRegions([])
-              setSelectedTypes([])
-              setSelectedState('')
-            }}
-            className="mt-2 text-xs text-[var(--bg-primary)] hover:underline"
-          >
-            Clear filters
-          </button>
-        </div>
-      ) : (
+      {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((u) => (
-            <UniversityCard key={u.id} university={u} programCount={programCounts[u.id]} />
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
+              <div className="mb-3 flex items-start justify-between">
+                <div className="h-10 w-10 rounded-lg bg-[var(--border)]" />
+                <div className="h-5 w-16 rounded-full bg-[var(--border)]" />
+              </div>
+              <div className="mb-2 h-4 w-3/4 rounded bg-[var(--border)]" />
+              <div className="mb-3 h-3 w-1/2 rounded bg-[var(--border)]" />
+              <div className="h-3 w-1/4 rounded bg-[var(--border)]" />
+            </div>
           ))}
         </div>
+      ) : (
+        <>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            Showing {filtered.length} of {universities.length} universities
+          </p>
+
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <p className="text-sm text-[var(--text-muted)]">No universities match your filters</p>
+              <button
+                onClick={() => {
+                  setSearch('')
+                  setSelectedRegions([])
+                  setSelectedTypes([])
+                  setSelectedState('')
+                }}
+                className="mt-2 text-xs text-[var(--bg-primary)] hover:underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filtered.map((u) => (
+                <UniversityCard key={u.id} university={u} programCount={programCounts[u.id]} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAllPrograms } from '@/lib/useSupabaseData'
+import { usePageMeta } from '@/lib/usePageMeta'
 import { REGIONS, PROGRAM_FIELDS, UNIVERSITY_TYPES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import Link from 'next/link'
@@ -20,6 +21,7 @@ interface ProgramMatch {
 }
 
 export default function MatchingPage() {
+  usePageMeta('Program Matching', 'Find graduate programs that match your interests in Brazil')
   const { programs: allPrograms, loading } = useAllPrograms()
   const [step, setStep] = useState(1)
   const [field, setField] = useState('')

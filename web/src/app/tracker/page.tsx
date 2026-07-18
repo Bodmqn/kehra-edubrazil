@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatDate, daysUntil, getDeadlineUrgency } from '@/lib/utils'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 interface SavedProgram {
   id: string
@@ -14,6 +15,7 @@ interface SavedProgram {
 const STORAGE_KEY = 'kehra-edubrazil-tracker'
 
 export default function TrackerPage() {
+  usePageMeta('My Tracker', 'Track your graduate program applications and deadlines')
   const [programs, setPrograms] = useState<SavedProgram[]>([])
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'deadline' | 'name'>('deadline')

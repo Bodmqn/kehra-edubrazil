@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
+import { usePageMeta } from '@/lib/usePageMeta'
 import type { ProgramWithUniversity } from '@/lib/types'
 
 function useLiveStats() {
@@ -15,6 +16,7 @@ function useLiveStats() {
 }
 
 export default function HomePage() {
+  usePageMeta('Home', 'Find Masters and PhD programs across 109 Brazilian universities')
   const stats = useLiveStats()
   const { programs: allPrograms, loading: programsLoading } = useAllPrograms()
   const [latestPrograms, setLatestPrograms] = useState<ProgramWithUniversity[]>([])

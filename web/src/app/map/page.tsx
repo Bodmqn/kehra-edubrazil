@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { universities } from '@/lib/data'
 import { slugify, formatDate } from '@/lib/utils'
 import { getMockPrograms } from '@/lib/mock-programs'
@@ -8,6 +8,7 @@ import { REGIONS, UNIVERSITY_TYPES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import SearchInput from '@/components/SearchInput'
 import Link from 'next/link'
+import { usePageMeta } from '@/lib/usePageMeta'
 
 const regionCoords: Record<string, { lat: number; lng: number }> = {
   Norte: { lat: -3.4653, lng: -62.2159 },
@@ -52,6 +53,7 @@ const stateCoords: Record<string, { lat: number; lng: number }> = {
 }
 
 export default function MapPage() {
+  usePageMeta('University Map', 'Explore Brazilian universities across all five regions')
   const [selectedRegion, setSelectedRegion] = useState<Region | ''>('')
   const [selectedType, setSelectedType] = useState<UniversityType | ''>('')
   const [search, setSearch] = useState('')
