@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="text-xs text-[var(--text-muted)]">
-            © {new Date().getFullYear()} Kehra • EduBrazil Hub
+            © {new Date().getFullYear()} The Kehra + EduBrazil Hub
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             Connecting international students to Brazilian graduate programs
