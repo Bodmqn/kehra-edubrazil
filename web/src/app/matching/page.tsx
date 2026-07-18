@@ -21,6 +21,7 @@ interface ProgramMatch {
   status: string
   matchScore: number
   deadline: string | null
+  edital_url: string | null
 }
 
 const STORAGE_KEY = 'kehra-edubrazil-tracker'
@@ -39,6 +40,9 @@ export default function MatchingPage() {
   const [resultLimit, setResultLimit] = useState(20)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [justSavedId, setJustSavedId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'score' | 'deadline' | 'name' | 'status'>('score')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
 
   const searchTokens = useMemo(() => {
     const q = aiQuery.trim()
@@ -81,11 +85,26 @@ export default function MatchingPage() {
         status: p.status,
         matchScore: Math.min(score, 99),
         deadline: p.deadline,
+        edital_url: p.edital_url,
       })
     })
 
-    return matches.sort((a, b) => b.matchScore - a.matchScore)
-  }, [allPrograms, field, level, region, type, aiQuery, openOnly, searchTokens])
+    matches.sort((a, b) => {
+      if (sortBy === 'deadline') {
+        if (!a.deadline && !b.deadline) return b.matchScore - a.matchScore
+        if (!a.deadline) return 1
+        if (!b.deadline) return -1
+        return a.deadline.localeCompare(b.deadline)
+      }
+      if (sortBy === 'name') return a.programName.localeCompare(b.programName)
+      if (sortBy === 'status') {
+        const order: Record<string, number> = { Aberto: 0, 'Em Breve': 1, Fechado: 2 }
+        return (order[a.status] ?? 3) - (order[b.status] ?? 3) || b.matchScore - a.matchScore
+      }
+      return b.matchScore - a.matchScore
+    })
+    return matches
+  }, [allPrograms, field, level, region, type, aiQuery, openOnly, searchTokens, sortBy])
 
   const displayedResults = results.slice(0, resultLimit)
 
@@ -117,6 +136,15 @@ export default function MatchingPage() {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
     setSavedIds(new Set(list.map(p => p.id)))
+  }
+
+  const toggleCompare = (id: string) => {
+    setCompareIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else if (next.size < 3) next.add(id)
+      return next
+    })
   }
 
   return (
@@ -280,7 +308,7 @@ export default function MatchingPage() {
               Change filters
             </button>
           </div>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -290,6 +318,24 @@ export default function MatchingPage() {
               />
               <span className="text-[11px] text-[var(--text-secondary)]">Open programs only</span>
             </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-2.5 py-1 text-[11px] text-white outline-none"
+            >
+              <option value="score">Best Match</option>
+              <option value="deadline">Deadline (soonest)</option>
+              <option value="name">Name A-Z</option>
+              <option value="status">Status (open first)</option>
+            </select>
+            {compareIds.size >= 2 && (
+              <button
+                onClick={() => setCompareIds(new Set())}
+                className="text-[11px] text-[var(--text-muted)] hover:text-white transition-colors"
+              >
+                Clear compare
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -343,49 +389,88 @@ export default function MatchingPage() {
               const isSaved = savedIds.has(r.id)
               const showSaved = justSavedId === r.id
               const regColor = REGIONS.find(reg => reg.key === r.region)?.color ?? '#666'
+              const isExpanded = expandedId === r.id
+              const isCompareChecked = compareIds.has(r.id)
               return (
                 <div
                   key={`${r.id}`}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 transition-all hover:border-[var(--bg-primary)]/30"
+                  className={`rounded-xl border bg-[var(--bg-card)] p-4 transition-all ${
+                    isCompareChecked
+                      ? 'border-[var(--bg-accent)] ring-1 ring-[var(--bg-accent)]/30'
+                      : 'border-[var(--border)] hover:border-[var(--bg-primary)]/30'
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <Link href={`/universities/${r.universitySlug}`} className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: regColor }}
-                        />
-                        {i === 0 && (
-                          <span className="rounded bg-[var(--bg-accent)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg-accent)] shrink-0">
-                            BEST MATCH
+                  <div className="flex items-start gap-2">
+                    {/* Compare checkbox */}
+                    <label className="mt-1 cursor-pointer shrink-0" title="Select to compare">
+                      <input
+                        type="checkbox"
+                        checked={isCompareChecked}
+                        onChange={() => toggleCompare(r.id)}
+                        className="h-3.5 w-3.5 accent-[var(--bg-accent)]"
+                      />
+                    </label>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/universities/${r.universitySlug}`}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: regColor }}
+                          />
+                          {i === 0 && (
+                            <span className="rounded bg-[var(--bg-accent)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg-accent)] shrink-0">
+                              BEST MATCH
+                            </span>
+                          )}
+                          <h3 className="text-sm font-semibold text-white hover:text-[var(--bg-primary)] transition-colors truncate">
+                            {r.programName}
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                          {r.universityName} ({r.universityAcronym}) · {r.region} · {r.field}
+                        </p>
+                        <div className="mt-2 flex items-center gap-2">
+                          {r.deadline && (
+                            <span className="text-[11px]" style={{ color: urgency.color }}>
+                              {urgency.label} · {formatDate(r.deadline)}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                              r.status === 'Aberto'
+                                ? 'border-green-500/20 bg-green-500/10 text-green-400'
+                                : r.status === 'Em Breve'
+                                  ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                                  : 'border-red-500/20 bg-red-500/10 text-red-400'
+                            }`}
+                          >
+                            {r.status}
                           </span>
-                        )}
-                        <h3 className="text-sm font-semibold text-white hover:text-[var(--bg-primary)] transition-colors truncate">
-                          {r.programName}
-                        </h3>
-                      </div>
-                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                        {r.universityName} ({r.universityAcronym}) · {r.region} · {r.field}
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        {r.deadline && (
-                          <span className="text-[11px]" style={{ color: urgency.color }}>
-                            {urgency.label} · {formatDate(r.deadline)}
-                          </span>
-                        )}
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                            r.status === 'Aberto'
-                              ? 'border-green-500/20 bg-green-500/10 text-green-400'
-                              : r.status === 'Em Breve'
-                                ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
-                                : 'border-red-500/20 bg-red-500/10 text-red-400'
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </div>
-                    </Link>
+                        </div>
+                      </Link>
+
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div className="mt-3 border-t border-[var(--border)] pt-3 space-y-1.5">
+                          {r.edital_url && (
+                            <a
+                              href={r.edital_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-[var(--bg-primary)] hover:underline"
+                            >
+                              View edital ↗
+                            </a>
+                          )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--text-muted)]">
+                            <span>Level: {r.level}</span>
+                            <span>Field: {r.field}</span>
+                            <span>Region: {r.region}</span>
+                            <span>Score: {r.matchScore}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <div className="text-right">
                         <div className="text-xs font-bold text-[var(--bg-primary)]">{r.matchScore}%</div>
@@ -403,12 +488,65 @@ export default function MatchingPage() {
                       >
                         {showSaved ? 'Saved!' : isSaved ? 'Saved ✓' : '+ Save'}
                       </button>
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                        className="text-[10px] text-[var(--text-muted)] hover:text-white transition-colors"
+                        aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+                      >
+                        {isExpanded ? '▲ Less' : '▼ More'}
+                      </button>
                     </div>
                   </div>
                 </div>
               )
             })}
           </div>
+          {/* Comparison table */}
+          {compareIds.size >= 2 && (
+            <div className="mt-8 rounded-xl border border-[var(--bg-accent)]/30 bg-[var(--bg-card)] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Compare Programs</h3>
+                <button
+                  onClick={() => setCompareIds(new Set())}
+                  className="text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="py-2 pr-4 text-left text-[var(--text-muted)] font-medium">Attribute</th>
+                      {results.filter(r => compareIds.has(r.id)).slice(0, 3).map(r => (
+                        <th key={r.id} className="py-2 px-3 text-left font-semibold text-white">{r.universityAcronym}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { label: 'Program', get: (r: ProgramMatch) => r.programName },
+                      { label: 'University', get: (r: ProgramMatch) => `${r.universityName} (${r.universityAcronym})` },
+                      { label: 'Level', get: (r: ProgramMatch) => r.level },
+                      { label: 'Field', get: (r: ProgramMatch) => r.field },
+                      { label: 'Region', get: (r: ProgramMatch) => r.region },
+                      { label: 'Status', get: (r: ProgramMatch) => r.status },
+                      { label: 'Deadline', get: (r: ProgramMatch) => r.deadline ? formatDate(r.deadline) : 'TBD' },
+                      { label: 'Score', get: (r: ProgramMatch) => `${r.matchScore}%` },
+                    ].map(row => (
+                      <tr key={row.label} className="border-b border-[var(--border)] last:border-0">
+                        <td className="py-2 pr-4 text-[var(--text-muted)] whitespace-nowrap">{row.label}</td>
+                        {results.filter(r => compareIds.has(r.id)).slice(0, 3).map(r => (
+                          <td key={r.id} className="py-2 px-3 text-[var(--text-secondary)]">{row.get(r)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {resultLimit < results.length && (
             <button
               onClick={() => setResultLimit(prev => prev + 20)}
@@ -433,6 +571,8 @@ export default function MatchingPage() {
               setType('')
               setShowResults(false)
               setStep(1)
+              setCompareIds(new Set())
+              setExpandedId(null)
             }}
             className="mt-2 text-xs text-[var(--bg-primary)] hover:underline"
           >
