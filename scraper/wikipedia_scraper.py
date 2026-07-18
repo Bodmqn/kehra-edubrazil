@@ -1,12 +1,9 @@
-"""
-Wikipedia Scraper — Fetches university descriptions and history
-for all 109 Brazilian universities.
-"""
-
 import os
 import re
+import time
 import logging
 from datetime import datetime
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -27,9 +24,24 @@ class WikipediaScraper:
         self.session.headers.update({
             "User-Agent": "KehraEduBrazil/1.0 (University scraper; contact@kehra.com.br)"
         })
+        self._last_request = 0.0
+
+    def _execute(self, query) -> dict:
+        resp = query.execute()
+        if resp.error:
+            logger.error(f"Supabase error: {resp.error}")
+            raise RuntimeError(str(resp.error))
+        return resp
+
+    def _rate_limit(self):
+        """Ensure at most 1 request per second to Wikipedia API."""
+        elapsed = time.time() - self._last_request
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
+        self._last_request = time.time()
 
     def search_wikipedia(self, query: str) -> Optional[str]:
-        """Search Wikipedia for a university page and return its extract."""
+        self._rate_limit()
         params = {
             "action": "query",
             "format": "json",
@@ -38,7 +50,6 @@ class WikipediaScraper:
             "srlimit": 3,
             "srprop": "",
         }
-
         try:
             resp = self.session.get(WIKIPEDIA_API, params=params, timeout=15)
             data = resp.json()
@@ -47,11 +58,10 @@ class WikipediaScraper:
                 return pages[0]["title"]
         except Exception as e:
             logger.warning(f"Wikipedia search failed for {query}: {e}")
-
         return None
 
     def get_extract(self, title: str) -> Optional[dict]:
-        """Get the page extract (first paragraph) and URL."""
+        self._rate_limit()
         params = {
             "action": "query",
             "format": "json",
@@ -61,7 +71,6 @@ class WikipediaScraper:
             "explaintext": True,
             "inprop": "url",
         }
-
         try:
             resp = self.session.get(WIKIPEDIA_API, params=params, timeout=15)
             data = resp.json()
@@ -76,23 +85,21 @@ class WikipediaScraper:
                 }
         except Exception as e:
             logger.warning(f"Failed to get extract for {title}: {e}")
-
         return None
 
     def clean_extract(self, text: str) -> str:
-        """Clean up Wikipedia extract text."""
         text = re.sub(r"\s+", " ", text).strip()
         return text[:5000] if len(text) > 5000 else text
 
     def run(self):
-        """Scrape Wikipedia for all universities' descriptions."""
-        response = self.supabase.table("universities").select("id, name, acronym").execute()
-        universities = response.data
+        resp = self._execute(self.supabase.table("universities").select("id, name, acronym"))
+        universities = resp.data
+        success = 0
+        skipped = 0
 
         for uni in universities:
             logger.info(f"Fetching description for {uni['name']}...")
 
-            # Try English name first, then Portuguese
             title = self.search_wikipedia(f"{uni['name']} ({uni['acronym']})")
             if not title:
                 title = self.search_wikipedia(uni['name'])
@@ -101,29 +108,32 @@ class WikipediaScraper:
                 result = self.get_extract(title)
                 if result and result.get("extract"):
                     cleaned = self.clean_extract(result["extract"])
-                    self.supabase.table("university_details").upsert({
-                        "university_id": uni["id"],
-                        "about_text": cleaned,
-                        "wikipedia_url": result["url"],
-                        "scraped_at": datetime.utcnow().isoformat(),
-                    }).execute()
-                    logger.info(f"  ✓ Description saved ({len(cleaned)} chars)")
+                    try:
+                        self._execute(self.supabase.table("university_details").upsert({
+                            "university_id": uni["id"],
+                            "about_text": cleaned,
+                            "wikipedia_url": result["url"],
+                            "scraped_at": datetime.utcnow().isoformat(),
+                        }))
+                        logger.info(f"  ✓ ({len(cleaned)} chars)")
+                        success += 1
+                    except Exception as e:
+                        logger.error(f"  ✗ Failed to save: {e}")
                 else:
-                    logger.warning(f"  ✗ No extract found for {title}")
+                    logger.warning(f"  ✗ No extract for '{title}'")
+                    skipped += 1
             else:
                 logger.warning(f"  ✗ No Wikipedia page found for {uni['name']}")
+                skipped += 1
 
-        logger.info("Wikipedia scraping complete.")
-
+        logger.info(f"Done. {success} saved, {skipped} skipped")
 
 if __name__ == "__main__":
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
-
     if not supabase_url or not supabase_key:
         logger.error("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set")
         exit(1)
-
     supabase: Client = create_client(supabase_url, supabase_key)
     scraper = WikipediaScraper(supabase)
     scraper.run()

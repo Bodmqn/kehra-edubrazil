@@ -1,15 +1,10 @@
-"""
-SIGAA Parser — Handles ~70 Brazilian universities using the SIGAA JSF framework.
-
-URL pattern: sigaa.*.edu.br/sigaa/public/processo_seletivo/lista.jsf
-Extracts: program name, level (Mestrado/Doutorado), deadline, status, edital PDF link
-"""
-
 import os
 import re
+import time
 import logging
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -20,11 +15,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SIGAA_BASE_PATHS = [
+BASE_PATHS = [
     "/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S",
     "/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-stricto",
     "/sigaa/public/processo_seletivo/lista.jsf?aba=p-processo&nivel=S",
 ]
+
+BATCH_SIZE = 50
+MAX_RETRIES = 3
 
 
 class SIGAAParser:
@@ -42,49 +40,61 @@ class SIGAAParser:
             raise RuntimeError(str(resp.error))
         return resp
 
+    def _fetch_with_retry(self, url: str, timeout: int = 30) -> Optional[str]:
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = self.session.get(url, timeout=timeout)
+                resp.raise_for_status()
+                return resp.text
+            except requests.Timeout:
+                logger.warning(f"  Timeout on {url} (attempt {attempt + 1}/{MAX_RETRIES})")
+            except requests.ConnectionError:
+                logger.warning(f"  Connection error on {url} (attempt {attempt + 1}/{MAX_RETRIES})")
+            except Exception as e:
+                logger.warning(f"  Error fetching {url}: {e} (attempt {attempt + 1}/{MAX_RETRIES})")
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(2 ** attempt)
+        return None
+
     def fetch_universities(self) -> list[dict]:
-        """Fetch all universities from Supabase that have SIGAA URLs."""
-        response = self._execute(self.supabase.table("universities").select("*"))
-        return response.data
+        resp = self._execute(self.supabase.table("universities").select("*"))
+        return resp.data
 
     def is_sigaa_url(self, url: str) -> bool:
-        """Check if a URL follows the SIGAA pattern."""
         return "sigaa" in url.lower() and "lista.jsf" in url.lower()
 
-    def parse_listing_page(self, url: str) -> list[dict]:
-        """Fetch and parse a SIGAA listing page for programs."""
-        programs = []
+    def resolve_sigaa_url(self, base_url: str) -> Optional[str]:
+        for path in BASE_PATHS:
+            url = urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
+            html = self._fetch_with_retry(url, timeout=15)
+            if html and ("listagem" in html.lower() or "processo" in html.lower()):
+                return url
+        return None
 
-        try:
-            resp = self.session.get(url, timeout=30)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Failed to fetch {url}: {e}")
+    def parse_listing_page(self, url: str) -> list[dict]:
+        programs = []
+        html = self._fetch_with_retry(url)
+        if not html:
             return programs
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = BeautifulSoup(html, "lxml")
 
-        # SIGAA typically uses HTML tables with class "listagem"
         table = soup.find("table", class_=re.compile(r"listagem"))
         if not table:
-            # Try finding any table with program-related content
             table = soup.find("table")
             if not table:
-                logger.warning(f"No table found at {url}")
+                logger.warning(f"  No table found at {url}")
                 return programs
 
-        rows = table.find_all("tr")[1:]  # Skip header row
-
+        rows = table.find_all("tr")[1:]
         for row in rows:
             cells = row.find_all("td")
             if len(cells) < 3:
                 continue
-
             program = self._parse_row(cells, url)
             if program:
                 programs.append(program)
 
-        # Handle pagination (JSF view state)
         next_page = self._get_next_page(soup, url)
         if next_page:
             programs.extend(self.parse_listing_page(next_page))
@@ -92,19 +102,14 @@ class SIGAAParser:
         return programs
 
     def _parse_row(self, cells: list, base_url: str) -> Optional[dict]:
-        """Extract program data from a table row."""
         try:
-            name_cell = cells[0]
-            name = name_cell.get_text(strip=True)
-
-            # Determine level
+            name = cells[0].get_text(strip=True)
             level = "Ambos"
             if "MESTRADO" in name.upper():
                 level = "Mestrado"
             elif "DOUTORADO" in name.upper():
                 level = "Doutorado"
 
-            # Extract status
             status = "Aberto"
             for cell in cells:
                 text = cell.get_text(strip=True).upper()
@@ -113,24 +118,18 @@ class SIGAAParser:
                 elif "EM BREVE" in text or "PROXIMAMENTE" in text:
                     status = "Em Breve"
 
-            # Extract deadline date
             deadline = None
             for cell in cells:
-                text = cell.get_text(strip=True)
-                date_match = re.search(
-                    r"(\d{2})/(\d{2})/(\d{4})", text
-                )
-                if date_match:
-                    day, month, year = date_match.groups()
-                    deadline = f"{year}-{month}-{day}"
+                m = re.search(r"(\d{2})/(\d{2})/(\d{4})", cell.get_text(strip=True))
+                if m:
+                    deadline = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
 
-            # Extract edital PDF link
             edital_url = None
             for cell in cells:
                 link = cell.find("a", href=re.compile(r"\.pdf", re.I))
                 if link:
                     href = link.get("href", "")
-                    edital_url = href if href.startswith("http") else base_url + href
+                    edital_url = href if href.startswith("http") else urljoin(base_url, href)
 
             return {
                 "name": name,
@@ -140,33 +139,44 @@ class SIGAAParser:
                 "status": status,
                 "edital_url": edital_url,
             }
-
         except Exception as e:
-            logger.warning(f"Error parsing row: {e}")
+            logger.warning(f"  Error parsing row: {e}")
             return None
 
     def _get_next_page(self, soup: BeautifulSoup, current_url: str) -> Optional[str]:
-        """Find the next page link in JSF pagination."""
         next_link = soup.find("a", string=re.compile(r"Próximo|Next|>"))
         if next_link:
             href = next_link.get("href", "")
             if href:
-                return href if href.startswith("http") else current_url.rsplit("/", 1)[0] + "/" + href
+                return href if href.startswith("http") else urljoin(current_url, href)
         return None
 
+    def _upsert_batch(self, rows: list[dict]):
+        for i in range(0, len(rows), BATCH_SIZE):
+            chunk = rows[i:i + BATCH_SIZE]
+            self._execute(self.supabase.table("programs").upsert(chunk))
+
     def run(self):
-        """Run the parser for all SIGAA universities."""
         universities = self.fetch_universities()
         total_programs = 0
+        total_success = 0
+        total_error = 0
 
         for uni in universities:
-            if not self.is_sigaa_url(uni.get("sigaa_url", "")):
+            sigaa = uni.get("sigaa_url", "")
+            if not sigaa or not isinstance(sigaa, str) or not sigaa.startswith("http"):
+                logger.warning(f"Skipping {uni['name']} ({uni['acronym']}): invalid SIGAA URL")
+                continue
+
+            actual_url = self.resolve_sigaa_url(sigaa)
+            if not actual_url:
+                logger.warning(f"Skipping {uni['name']} ({uni['acronym']}): no reachable SIGAA listing")
                 continue
 
             logger.info(f"Scraping {uni['name']} ({uni['acronym']})...")
 
             try:
-                programs = self.parse_listing_page(uni["sigaa_url"])
+                programs = self.parse_listing_page(actual_url)
                 logger.info(f"  Found {len(programs)} programs")
 
                 if programs:
@@ -183,9 +193,8 @@ class SIGAAParser:
                         }
                         for p in programs
                     ]
-                    self._execute(self.supabase.table("programs").upsert(rows))
+                    self._upsert_batch(rows)
 
-                # Log success
                 self._execute(self.supabase.table("scrape_logs").insert({
                     "university_id": uni["id"],
                     "status": "success" if programs else "partial",
@@ -194,9 +203,11 @@ class SIGAAParser:
                 }))
 
                 total_programs += len(programs)
+                total_success += 1
 
             except Exception as e:
                 logger.error(f"  Error scraping {uni['name']}: {e}")
+                total_error += 1
                 try:
                     self._execute(self.supabase.table("scrape_logs").insert({
                         "university_id": uni["id"],
@@ -208,17 +219,18 @@ class SIGAAParser:
                 except Exception as log_e:
                     logger.error(f"  Failed to log scrape error: {log_e}")
 
-        logger.info(f"Done. Total programs scraped: {total_programs}")
+        logger.info(
+            f"Done. Total programs: {total_programs}, "
+            f"success: {total_success}, errors: {total_error}"
+        )
 
 
 if __name__ == "__main__":
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
-
     if not supabase_url or not supabase_key:
         logger.error("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set")
         exit(1)
-
     supabase: Client = create_client(supabase_url, supabase_key)
     parser = SIGAAParser(supabase)
     parser.run()
