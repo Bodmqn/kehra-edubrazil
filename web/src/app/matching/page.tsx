@@ -6,6 +6,7 @@ import { usePageMeta } from '@/lib/usePageMeta'
 import { REGIONS, PROGRAM_FIELDS, UNIVERSITY_TYPES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { slugify, daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
 
 interface ProgramMatch {
@@ -25,6 +26,7 @@ interface ProgramMatch {
 }
 
 const STORAGE_KEY = 'kehra-edubrazil-tracker'
+const SAVED_SEARCH_KEY = 'kehra-edubrazil-matching-saved'
 
 export default function MatchingPage() {
   usePageMeta('Program Matching', 'Find graduate programs that match your interests in Brazil')
@@ -43,6 +45,76 @@ export default function MatchingPage() {
   const [sortBy, setSortBy] = useState<'score' | 'deadline' | 'name' | 'status'>('score')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Restore search from URL params on mount
+  useEffect(() => {
+    const f = searchParams.get('f')
+    const l = searchParams.get('l')
+    const r = searchParams.get('r')
+    const t = searchParams.get('t')
+    const q = searchParams.get('q')
+    const o = searchParams.get('o')
+    if (f || l || r || t || q) {
+      if (f) setField(f)
+      if (l && ['Mestrado', 'Doutorado', 'Ambos'].includes(l)) setLevel(l as typeof level)
+      if (r && REGIONS.some(reg => reg.key === r)) setRegion(r as Region)
+      if (t && ['Federal', 'State'].includes(t)) setType(t as UniversityType)
+      if (q) setAiQuery(q)
+      if (o === '1') setOpenOnly(true)
+      setShowResults(true)
+    }
+  }, [])
+
+  // Push filters to URL when results are active
+  useEffect(() => {
+    if (!showResults) return
+    const params = new URLSearchParams()
+    if (field) params.set('f', field)
+    if (level) params.set('l', level)
+    if (region) params.set('r', region)
+    if (type) params.set('t', type)
+    if (aiQuery.trim()) params.set('q', aiQuery.trim())
+    if (openOnly) params.set('o', '1')
+    const qs = params.toString()
+    router.replace(qs ? `/matching?${qs}` : '/matching', { scroll: false })
+  }, [field, level, region, type, aiQuery, openOnly, showResults, router])
+
+  // Check for saved search on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(SAVED_SEARCH_KEY)
+    if (saved && !showResults) {
+      setShowRestoreBanner(true)
+    }
+  }, [])
+
+  const restoreSearch = () => {
+    const saved = localStorage.getItem(SAVED_SEARCH_KEY)
+    if (saved) {
+      const s = JSON.parse(saved)
+      if (s.field) setField(s.field)
+      if (s.level) setLevel(s.level)
+      if (s.region) setRegion(s.region)
+      if (s.type) setType(s.type)
+      if (s.aiQuery) setAiQuery(s.aiQuery)
+      if (s.openOnly) setOpenOnly(true)
+      setShowResults(true)
+      setShowRestoreBanner(false)
+      localStorage.removeItem(SAVED_SEARCH_KEY)
+    }
+  }
+
+  const dismissRestore = () => {
+    setShowRestoreBanner(false)
+    localStorage.removeItem(SAVED_SEARCH_KEY)
+  }
+
+  const saveCurrentSearch = () => {
+    const data = { field, level, region, type, aiQuery, openOnly }
+    localStorage.setItem(SAVED_SEARCH_KEY, JSON.stringify(data))
+  }
 
   const searchTokens = useMemo(() => {
     const q = aiQuery.trim()
@@ -155,6 +227,31 @@ export default function MatchingPage() {
           Find graduate programs that match your interests
         </p>
       </div>
+
+      {/* Restore saved search banner */}
+      {showRestoreBanner && (
+        <div className="mb-8 rounded-xl border border-[var(--bg-accent)]/20 bg-[var(--bg-accent)]/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-[var(--text-secondary)]">
+              You have a saved search. Want to pick up where you left off?
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={restoreSearch}
+                className="rounded-lg bg-[var(--bg-accent)] px-3 py-1.5 text-xs font-medium text-black"
+              >
+                Restore
+              </button>
+              <button
+                onClick={dismissRestore}
+                className="text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Step wizard */}
       {!showResults && (
@@ -336,6 +433,13 @@ export default function MatchingPage() {
                 Clear compare
               </button>
             )}
+            <button
+              onClick={saveCurrentSearch}
+              className="text-[11px] text-[var(--bg-primary)] hover:underline transition-colors"
+              title="Save current filters to restore later"
+            >
+              Save Search
+            </button>
           </div>
         </div>
       )}
