@@ -9,9 +9,14 @@ export function generateStaticParams() {
   }))
 }
 
-export default function Page({ params }: { params: { slug: string } }) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
   const university: University | undefined = universities.find(
-    (u) => slugify(u.name) === params.slug,
+    (u) => slugify(u.name) === slug,
   )
-  return <UniversityDetail slug={params.slug} fallbackUniversity={university ?? null} />
+  return <UniversityDetail slug={slug} fallbackUniversity={university ?? null} />
 }
