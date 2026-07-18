@@ -15,9 +15,22 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Kehra • EduBrazil Hub — Graduate Programs in Brazil',
+  title: {
+    default: 'Kehra • EduBrazil Hub — Graduate Programs in Brazil',
+    template: '%s • Kehra EduBrazil Hub',
+  },
   description:
     'Find Masters and PhD programs across 109 Brazilian universities. Browse, compare, and apply to graduate programs with live deadline tracking.',
+  icons: {
+    icon: '/favicon.svg',
+  },
+  openGraph: {
+    title: 'Kehra • EduBrazil Hub',
+    description: 'Find Masters and PhD programs across 109 Brazilian universities.',
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Kehra EduBrazil Hub',
+  },
 }
 
 export default function RootLayout({
