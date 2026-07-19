@@ -17,7 +17,25 @@ export default function TrackerPage() {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(STORAGE_KEY)
-        if (stored) return JSON.parse(stored)
+        if (stored) {
+          const parsed: TrackerProgram[] = JSON.parse(stored)
+          return parsed.map((p) => ({
+            id: p.id,
+            name: p.name,
+            university: p.university,
+            universityId: p.universityId,
+            deadline: p.deadline ?? null,
+            level: p.level ?? '',
+            programUrl: p.programUrl ?? null,
+            stage: p.stage ?? 'saved',
+            priority: p.priority ?? 'medium',
+            notes: p.notes ?? '',
+            checklist: Array.isArray(p.checklist) ? p.checklist : [],
+            reminderDays: Array.isArray(p.reminderDays) ? p.reminderDays : [7, 3, 1],
+            createdAt: p.createdAt ?? new Date().toISOString(),
+            updatedAt: p.updatedAt ?? new Date().toISOString(),
+          }))
+        }
       } catch { /* ignore */ }
     }
     return []
