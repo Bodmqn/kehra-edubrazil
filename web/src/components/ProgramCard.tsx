@@ -53,7 +53,15 @@ export default function ProgramCard({ program, universityName }: ProgramCardProp
         name: program.name,
         university: universityName || '',
         deadline: program.deadline,
+        level: program.level,
+        programUrl: program.edital_url,
         stage: 'saved',
+        priority: 'medium',
+        notes: '',
+        checklist: [],
+        reminderDays: [7, 3, 1],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       setSaved(true)
       setJustSaved(true)
