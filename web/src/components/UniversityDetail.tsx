@@ -171,6 +171,20 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         </div>
       </section>
 
+      {university && (
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-6">
+          <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 p-4">
+            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university's official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change. For the most accurate and current information, please refer to the{' '}
+              <a href={university.school_url ?? '#'} target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors">Official University Website</a>
+              {' '}and the{' '}
+              <a href={university.sigaa_url ?? '#'} target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors">SIGAA/Edital links</a>
+              {' '}provided above.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
