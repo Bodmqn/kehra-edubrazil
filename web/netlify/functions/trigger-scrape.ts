@@ -16,7 +16,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   }
 
   const accessToken = authHeader.slice(7)
-  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
