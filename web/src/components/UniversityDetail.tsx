@@ -18,6 +18,7 @@ const regionColors: Record<string, string> = Object.fromEntries(
 
 const TABS = [
   { key: 'programs', label: 'Programs' },
+  { key: 'available', label: 'Available' },
   { key: 'about', label: 'About' },
   { key: 'study-guide', label: 'Study Guide' },
 ]
@@ -72,6 +73,15 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
     return filtered
   }, [programs, programSearch, levelFilter, showOpenOnly, sortBy])
+
+  const availablePrograms = useMemo(() => {
+    const prevYear = new Date().getFullYear() - 1
+    const byPrevYear = programs.filter(p => {
+      if (!p.deadline) return false
+      return new Date(p.deadline).getFullYear() === prevYear
+    })
+    return byPrevYear.length > 0 ? byPrevYear : programs
+  }, [programs])
 
   if (!university) {
     return (
@@ -248,6 +258,45 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                   {filteredPrograms.map((program) => (
                     <ProgramCard key={program.id} program={program} universityName={`${university.name} (${university.acronym})`} />
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Available Tab */}
+          {activeTab === 'available' && (
+            <div>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white">Available Programs</h3>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                  These programs were offered in recent years and are expected to be available again. Use this as a reference to explore the university's graduate offerings.
+                </p>
+              </div>
+              {['Mestrado', 'Doutorado'].map(level => {
+                const levelPrograms = availablePrograms.filter(p => p.level === level)
+                if (levelPrograms.length === 0) return null
+                return (
+                  <div key={level} className="mb-6">
+                    <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">{level}</h4>
+                    <div className="space-y-2">
+                      {levelPrograms.map(p => (
+                        <div
+                          key={p.id}
+                          className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3"
+                        >
+                          <div className="text-sm font-medium text-white">{p.name}</div>
+                          {p.field && (
+                            <div className="mt-0.5 text-xs text-[var(--text-muted)]">{p.field}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              {availablePrograms.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <p className="text-sm text-[var(--text-muted)]">No program data available for this university yet.</p>
                 </div>
               )}
             </div>
