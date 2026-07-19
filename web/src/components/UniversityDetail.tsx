@@ -6,6 +6,7 @@ import { slugify } from '@/lib/utils'
 import { getMockPrograms } from '@/lib/mock-programs'
 import { useUniversities, usePrograms, useUniversityDetails } from '@/lib/useSupabaseData'
 import type { University } from '@/lib/types'
+import { COST_OF_LIVING } from '@/lib/costOfLiving'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import SearchInput from '@/components/SearchInput'
@@ -185,7 +186,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-6">
           <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 p-4">
             <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university's official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change. For the most accurate and current information, please refer to the official university links provided above: <a href={university.school_url ?? '#'} target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors whitespace-nowrap">Official Website</a> · <a href={university.sigaa_url ?? '#'} target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors whitespace-nowrap">SIGAA/Edital</a>.
+              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university's official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change.
             </p>
           </div>
         </div>
@@ -383,12 +384,39 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-                  <h4 className="mb-2 text-sm font-semibold text-white">Cost of Living</h4>
-                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                    Cost of living varies by city. In major cities like São Paulo or Rio de Janeiro,
-                    expect monthly expenses of R$ 2,500-4,000 for a single student, including rent,
-                    food, transport, and utilities. Smaller cities are more affordable.
-                  </p>
+                  <h4 className="mb-2 text-sm font-semibold text-white">Cost of Living in {university.state}</h4>
+                  {(() => {
+                    const cost = COST_OF_LIVING[university.state]
+                    if (!cost) {
+                      return (
+                        <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                          Cost of living varies by city. In major cities like São Paulo or Rio de Janeiro,
+                          expect monthly expenses of R$ 2,500-4,000 for a single student, including rent,
+                          food, transport, and utilities. Smaller cities are more affordable.
+                        </p>
+                      )
+                    }
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-[var(--text-secondary)]">Estimated monthly cost</span>
+                          <span className="text-sm font-bold text-white">{cost.brlRange}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-[var(--text-secondary)]">Approximate USD</span>
+                          <span className="text-sm font-bold text-[var(--bg-accent)]">{cost.usdRange}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-[var(--text-secondary)]">Cost level</span>
+                          <span className="text-xs font-medium text-white">{cost.level}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-[var(--text-secondary)]">Capital</span>
+                          <span className="text-xs text-white">{cost.capital}</span>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
                   <h4 className="mb-2 text-sm font-semibold text-white">Housing</h4>
