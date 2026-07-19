@@ -4,7 +4,7 @@ import time
 import logging
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -19,6 +19,7 @@ BASE_PATHS = [
     "/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S",
     "/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-stricto",
     "/sigaa/public/processo_seletivo/lista.jsf?aba=p-processo&nivel=S",
+    "/sigaa/public/processo_seletivo/lista.jsf?nivel=S&aba=p-processo",
 ]
 
 BATCH_SIZE = 50
@@ -44,6 +45,11 @@ class SIGAAParser:
         for attempt in range(MAX_RETRIES):
             try:
                 resp = self.session.get(url, timeout=timeout)
+                if resp.status_code == 503:
+                    logger.warning(f"  503 Service Unavailable on {url} (attempt {attempt + 1}/{MAX_RETRIES})")
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(2 ** attempt)
+                    continue
                 resp.raise_for_status()
                 return resp.text
             except requests.Timeout:
@@ -63,9 +69,24 @@ class SIGAAParser:
     def is_sigaa_url(self, url: str) -> bool:
         return "sigaa" in url.lower() and "lista.jsf" in url.lower()
 
+    def _normalize_sigaa_url(self, url: str) -> str:
+        parsed = urlparse(url)
+        path = parsed.path
+
+        path = path.replace("/sigaa/sigaa/", "/sigaa/")
+
+        if "/sigaa/" in path:
+            idx = path.index("/sigaa/")
+            path = path[:idx]
+
+        scheme = parsed.scheme or "https"
+        netloc = parsed.netloc or parsed.hostname or ""
+        return f"{scheme}://{netloc}{path}" if path else f"{scheme}://{netloc}"
+
     def resolve_sigaa_url(self, base_url: str) -> Optional[str]:
+        normalized = self._normalize_sigaa_url(base_url)
         for path in BASE_PATHS:
-            url = urljoin(base_url.rstrip("/") + "/", path.lstrip("/"))
+            url = urljoin(normalized.rstrip("/") + "/", path.lstrip("/"))
             html = self._fetch_with_retry(url, timeout=15)
             if html and ("listagem" in html.lower() or "processo" in html.lower()):
                 return url
@@ -79,12 +100,17 @@ class SIGAAParser:
 
         soup = BeautifulSoup(html, "lxml")
 
-        table = soup.find("table", class_=re.compile(r"listagem"))
+        possible_tables = soup.find_all("table")
+        table = None
+        for t in possible_tables:
+            if t.get("class") and any("listagem" in (c or "").lower() for c in t.get("class", [])):
+                table = t
+                break
+        if not table and possible_tables:
+            table = possible_tables[0]
         if not table:
-            table = soup.find("table")
-            if not table:
-                logger.warning(f"  No table found at {url}")
-                return programs
+            logger.warning(f"  No table found at {url}")
+            return programs
 
         rows = table.find_all("tr")[1:]
         for row in rows:
@@ -144,7 +170,7 @@ class SIGAAParser:
             return None
 
     def _get_next_page(self, soup: BeautifulSoup, current_url: str) -> Optional[str]:
-        next_link = soup.find("a", string=re.compile(r"Próximo|Next|>"))
+        next_link = soup.find("a", string=re.compile(r"Pr[oó]ximo|Next|>"))
         if next_link:
             href = next_link.get("href", "")
             if href:
@@ -168,7 +194,14 @@ class SIGAAParser:
                 logger.warning(f"Skipping {uni['name']} ({uni['acronym']}): invalid SIGAA URL")
                 continue
 
-            actual_url = self.resolve_sigaa_url(sigaa) or sigaa
+            if not self.is_sigaa_url(sigaa):
+                logger.info(f"Skipping {uni['name']} ({uni['acronym']}): not a SIGAA URL (needs custom parser)")
+                continue
+
+            if "lista.jsf" in sigaa:
+                actual_url = sigaa
+            else:
+                actual_url = self.resolve_sigaa_url(sigaa) or sigaa
 
             logger.info(f"Scraping {uni['name']} ({uni['acronym']})...")
 
@@ -210,7 +243,7 @@ class SIGAAParser:
                         "university_id": uni["id"],
                         "status": "error",
                         "programs_found": 0,
-                        "errors": str(e),
+                        "errors": str(e)[:500],
                         "scraped_at": datetime.utcnow().isoformat(),
                     }))
                 except Exception as log_e:
@@ -220,6 +253,7 @@ class SIGAAParser:
             f"Done. Total programs: {total_programs}, "
             f"success: {total_success}, errors: {total_error}"
         )
+        return total_programs
 
 
 if __name__ == "__main__":

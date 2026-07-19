@@ -40,11 +40,11 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/matching"
+            href="/programs"
             className="rounded-lg bg-[var(--bg-primary)] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-            aria-label="Find graduate programs matching your interests"
+            aria-label="Search graduate programs"
           >
-            Find Program
+            Search Programs
           </Link>
         </div>
       </div>

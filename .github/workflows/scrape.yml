@@ -22,11 +22,11 @@ jobs:
         run: |
           pip install -r scraper/requirements.txt
 
-      - name: Run SIGAA Parser
+      - name: Run all scrapers (SIGAA + custom portals)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python scraper/sigaa_parser.py
+        run: python scraper/run_all.py
 
       - name: Run Wikipedia Scraper (Sundays only)
         if: github.event_name != 'pull_request'

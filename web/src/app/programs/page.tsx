@@ -10,7 +10,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { slugify, daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
 import { useDebounce } from '@/lib/hooks'
 
-interface ProgramMatch {
+interface ProgramResult {
   id: string
   programName: string
   universityName: string
@@ -21,13 +21,11 @@ interface ProgramMatch {
   field: string
   region: string
   status: string
-  matchScore: number
   deadline: string | null
   edital_url: string | null
 }
 
 const STORAGE_KEY = 'kehra-edubrazil-tracker'
-const SAVED_SEARCH_KEY = 'kehra-edubrazil-matching-saved'
 
 function normalize(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -122,9 +120,14 @@ function expandTokens(tokens: string[]): string[] {
   return [...expanded]
 }
 
-export default function MatchingPage() {
-  usePageMeta('Program Matching', 'Find graduate programs that match your interests in Brazil')
+export default function ProgramsPage() {
+  usePageMeta('Program Search', 'Search graduate programs across Brazilian universities')
   const { programs: allPrograms, loading } = useAllPrograms()
+  const excludedAcronyms = useMemo(() => new Set(['UFABC']), [])
+  const searchablePrograms = useMemo(
+    () => allPrograms.filter(p => !excludedAcronyms.has(p.university_acronym)),
+    [allPrograms, excludedAcronyms]
+  )
   const [level, setLevel] = useState<'Mestrado' | 'Doutorado' | 'Ambos' | ''>('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
@@ -133,40 +136,30 @@ export default function MatchingPage() {
   const [region, setRegion] = useState<Region | ''>('')
   const [type, setType] = useState<UniversityType | ''>('')
   const [aiQuery, setAiQuery] = useState('')
-  const [showResults, setShowResults] = useState(false)
   const [openOnly, setOpenOnly] = useState(false)
   const [resultLimit, setResultLimit] = useState(20)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [justSavedId, setJustSavedId] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState<'score' | 'deadline' | 'name' | 'status'>('score')
+  const [sortBy, setSortBy] = useState<'deadline' | 'name' | 'status'>('status')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set())
-  const [showRestoreBanner, setShowRestoreBanner] = useState(false)
-  const [showSavedSearchFeedback, setShowSavedSearchFeedback] = useState(false)
-  const [hasVisitedBefore, setHasVisitedBefore] = useState<boolean | null>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  // Restore search from URL params on mount
   useEffect(() => {
     const l = searchParams.get('l')
     const r = searchParams.get('r')
     const t = searchParams.get('t')
     const q = searchParams.get('q')
     const o = searchParams.get('o')
-    if (l || r || t || q) {
-      if (l && ['Mestrado', 'Doutorado', 'Ambos'].includes(l)) setLevel(l as typeof level)
-      if (r && REGIONS.some(reg => reg.key === r)) setRegion(r as Region)
-      if (t && ['Federal', 'State'].includes(t)) setType(t as UniversityType)
-      if (q) setAiQuery(q)
-      if (o === '1') setOpenOnly(true)
-      setShowResults(true)
-    }
+    if (l && ['Mestrado', 'Doutorado', 'Ambos'].includes(l)) setLevel(l as typeof level)
+    if (r && REGIONS.some(reg => reg.key === r)) setRegion(r as Region)
+    if (t && ['Federal', 'State'].includes(t)) setType(t as UniversityType)
+    if (q) setAiQuery(q)
+    if (o === '1') setOpenOnly(true)
   }, [])
 
-  // Push filters to URL when results are active
   useEffect(() => {
-    if (!showResults) return
     const params = new URLSearchParams()
     if (level) params.set('l', level)
     if (region) params.set('r', region)
@@ -174,44 +167,8 @@ export default function MatchingPage() {
     if (aiQuery.trim()) params.set('q', aiQuery.trim())
     if (openOnly) params.set('o', '1')
     const qs = params.toString()
-    router.replace(qs ? `/matching?${qs}` : '/matching', { scroll: false })
-  }, [level, region, type, aiQuery, openOnly, showResults, router])
-
-  // Check for saved search on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(SAVED_SEARCH_KEY)
-    if (saved && !showResults) {
-      setShowRestoreBanner(true)
-    }
-    setHasVisitedBefore(localStorage.getItem('kehra-edubrazil-visited') === '1')
-  }, [])
-
-  const restoreSearch = () => {
-    const saved = localStorage.getItem(SAVED_SEARCH_KEY)
-    if (saved) {
-      const s = JSON.parse(saved)
-      if (s.level) setLevel(s.level)
-      if (s.region) setRegion(s.region)
-      if (s.type) setType(s.type)
-      if (s.aiQuery) setAiQuery(s.aiQuery)
-      if (s.openOnly) setOpenOnly(true)
-      setShowResults(true)
-      setShowRestoreBanner(false)
-      localStorage.removeItem(SAVED_SEARCH_KEY)
-    }
-  }
-
-  const dismissRestore = () => {
-    setShowRestoreBanner(false)
-    localStorage.removeItem(SAVED_SEARCH_KEY)
-  }
-
-  const saveCurrentSearch = () => {
-    const data = { level, region, type, aiQuery, openOnly }
-    localStorage.setItem(SAVED_SEARCH_KEY, JSON.stringify(data))
-    setShowSavedSearchFeedback(true)
-    setTimeout(() => setShowSavedSearchFeedback(false), 2000)
-  }
+    router.replace(qs ? `/programs?${qs}` : '/programs', { scroll: false })
+  }, [level, region, type, aiQuery, openOnly, router])
 
   const debouncedAiQuery = useDebounce(aiQuery, 300)
 
@@ -223,11 +180,11 @@ export default function MatchingPage() {
 
   const autocompleteResults = useMemo(() => {
     const q = debouncedAiQuery.trim()
-    if (!q || q.length < 2 || !allPrograms.length) return []
+    if (!q || q.length < 2 || !searchablePrograms.length) return []
     const qTokens = q.toLowerCase().split(/\s+/).filter(t => t.length > 1)
     const searchTerms = expandTokens(qTokens)
     if (searchTerms.length === 0) return []
-    return allPrograms
+    return searchablePrograms
       .filter(p => {
         const haystack = normalize(`${p.name} ${p.university_name} ${p.university_acronym}`)
         return searchTerms.some(term => haystack.includes(term))
@@ -242,7 +199,7 @@ export default function MatchingPage() {
         deadline: p.deadline,
         status: p.status,
       }))
-  }, [debouncedAiQuery, allPrograms])
+  }, [debouncedAiQuery, searchablePrograms])
 
   const searchTokens = useMemo(() => {
     const q = aiQuery.trim()
@@ -251,10 +208,10 @@ export default function MatchingPage() {
     return expandTokens(tokens)
   }, [aiQuery])
 
-  const results = useMemo((): ProgramMatch[] => {
-    const matches: ProgramMatch[] = []
+  const results = useMemo((): ProgramResult[] => {
+    const matches: ProgramResult[] = []
 
-    allPrograms.forEach((p) => {
+    searchablePrograms.forEach((p) => {
       if (region && p.university_region !== region) return
       if (type && p.university_type !== type) return
 
@@ -265,11 +222,6 @@ export default function MatchingPage() {
         const haystack = normalize(`${p.name} ${p.field || ''} ${p.university_name} ${p.university_acronym}`)
         if (!searchTokens.some(t => haystack.includes(t))) return
       }
-
-      let score = 50
-      if (level && level !== 'Ambos' && p.level === level) score += 20
-      if (level === 'Ambos') score += 10
-      if (searchTokens) score += 15
 
       if (level && level !== 'Ambos' && p.level !== level) return
 
@@ -284,7 +236,6 @@ export default function MatchingPage() {
         field: p.field || 'General',
         region: p.university_region,
         status: effectiveStatus,
-        matchScore: Math.min(score, 99),
         deadline: p.deadline,
         edital_url: p.edital_url,
       })
@@ -292,20 +243,17 @@ export default function MatchingPage() {
 
     matches.sort((a, b) => {
       if (sortBy === 'deadline') {
-        if (!a.deadline && !b.deadline) return b.matchScore - a.matchScore
+        if (!a.deadline && !b.deadline) return 0
         if (!a.deadline) return 1
         if (!b.deadline) return -1
         return a.deadline.localeCompare(b.deadline)
       }
       if (sortBy === 'name') return a.programName.localeCompare(b.programName)
-      if (sortBy === 'status') {
-        const order: Record<string, number> = { Aberto: 0, 'Em Breve': 1, Fechado: 2 }
-        return (order[a.status] ?? 3) - (order[b.status] ?? 3) || b.matchScore - a.matchScore
-      }
-      return b.matchScore - a.matchScore
+      const order: Record<string, number> = { Aberto: 0, 'Em Breve': 1, Fechado: 2 }
+      return (order[a.status] ?? 3) - (order[b.status] ?? 3)
     })
     return matches
-  }, [allPrograms, level, region, type, aiQuery, openOnly, searchTokens, sortBy])
+  }, [searchablePrograms, level, region, type, aiQuery, openOnly, searchTokens, sortBy])
 
   const displayedResults = results.slice(0, resultLimit)
 
@@ -316,7 +264,7 @@ export default function MatchingPage() {
     }
   }, [])
 
-  const toggleSave = (program: ProgramMatch) => {
+  const toggleSave = (program: ProgramResult) => {
     const stored = localStorage.getItem(STORAGE_KEY)
     let list: Array<{ id: string; name: string; university: string; deadline: string | null; stage: string }> = stored ? JSON.parse(stored) : []
 
@@ -352,276 +300,220 @@ export default function MatchingPage() {
     return results.filter(r => compareIds.has(r.id)).slice(0, 3)
   }, [results, compareIds])
 
+  const hasActiveFilters = level || region || type || aiQuery.trim() || openOnly
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Program Matching</h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Search across {allPrograms.length} real graduate programs from {new Set(allPrograms.map(p => p.university_name)).size} Brazilian universities
-          </p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-white">Program Search</h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Search across {searchablePrograms.length} real graduate programs from {new Set(searchablePrograms.map(p => p.university_name)).size} Brazilian universities
+        </p>
       </div>
 
-      {/* Restore saved search banner */}
-      {showRestoreBanner && (
-        <div className="mb-8 rounded-xl border border-[var(--bg-accent)]/20 bg-[var(--bg-accent)]/5 p-4">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-[var(--text-secondary)]">
-              You have a saved search. Want to pick up where you left off?
-            </p>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={restoreSearch}
-                className="rounded-lg bg-[var(--bg-accent)] px-3 py-1.5 text-xs font-medium text-black"
-              >
-                Restore
-              </button>
-              <button
-                onClick={dismissRestore}
-                className="text-xs text-[var(--text-muted)] hover:text-white transition-colors"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* First visit hint */}
-      {!showResults && !showRestoreBanner && hasVisitedBefore === false && (
-        <div className="mb-8 rounded-xl border border-[var(--bg-accent)]/20 bg-[var(--bg-accent)]/5 p-4">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-[var(--text-secondary)]">
-              Search across {allPrograms.length} real graduate programs from {new Set(allPrograms.map(p => p.university_name)).size} Brazilian universities. Try typing a program name or keyword above.
-            </p>
-            <button
-              onClick={() => {
-                setHasVisitedBefore(true)
-                localStorage.setItem('kehra-edubrazil-visited', '1')
-              }}
-              className="shrink-0 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Search */}
-      {!showResults && (
-        <div className="mb-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
-          <div className="relative">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={aiQuery}
-              onChange={(e) => {
-                setAiQuery(e.target.value)
+      {/* Search bar */}
+      <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
+        <div className="relative">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={aiQuery}
+            onChange={(e) => {
+              setAiQuery(e.target.value)
+              setHighlightedIndex(-1)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                if (highlightedIndex >= 0 && autocompleteResults[highlightedIndex]) {
+                  const selected = autocompleteResults[highlightedIndex]
+                  setAiQuery(selected.programName)
+                }
                 setHighlightedIndex(-1)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (highlightedIndex >= 0 && autocompleteResults[highlightedIndex]) {
-                    const selected = autocompleteResults[highlightedIndex]
-                    setAiQuery(selected.programName)
-                  }
-                  setShowResults(true)
-                  setHighlightedIndex(-1)
-                  setShowAutocomplete(false)
-                }
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setHighlightedIndex(prev => Math.min(prev + 1, autocompleteResults.length - 1))
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setHighlightedIndex(prev => Math.max(prev - 1, -1))
-                }
-                if (e.key === 'Escape') {
-                  setShowAutocomplete(false)
-                  setHighlightedIndex(-1)
-                }
-              }}
-              onFocus={() => setShowAutocomplete(true)}
-              onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
-              placeholder='Search programs or universities... e.g. "Computer Science"'
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)] transition-colors"
-            />
-            {showAutocomplete && autocompleteResults.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-xl" role="listbox">
-                {autocompleteResults.map((item, i) => {
-                  const days = daysUntil(item.deadline)
-                  const urgency = getDeadlineUrgency(days)
-                  return (
-                    <button
-                      key={item.id}
-                      role="option"
-                      aria-selected={i === highlightedIndex}
-                      onClick={() => {
-                        setAiQuery(item.programName)
-                        setShowResults(true)
-                        setShowAutocomplete(false)
-                      }}
-                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
-                        i === highlightedIndex
-                          ? 'bg-[var(--bg-primary)]/10'
-                          : 'hover:bg-[var(--bg-dark)]'
-                      } ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate">{item.programName}</div>
-                        <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-                          {item.universityName} ({item.universityAcronym})
-                        </div>
+                setShowAutocomplete(false)
+              }
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setHighlightedIndex(prev => Math.min(prev + 1, autocompleteResults.length - 1))
+              }
+              if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setHighlightedIndex(prev => Math.max(prev - 1, -1))
+              }
+              if (e.key === 'Escape') {
+                setShowAutocomplete(false)
+                setHighlightedIndex(-1)
+              }
+            }}
+            onFocus={() => setShowAutocomplete(true)}
+            onBlur={() => setTimeout(() => setShowAutocomplete(false), 200)}
+            placeholder='Search programs or universities... e.g. "Computer Science"'
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-4 py-3 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)] transition-colors"
+          />
+          {showAutocomplete && autocompleteResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-xl" role="listbox">
+              {autocompleteResults.map((item, i) => {
+                const days = daysUntil(item.deadline)
+                const urgency = getDeadlineUrgency(days)
+                return (
+                  <button
+                    key={item.id}
+                    role="option"
+                    aria-selected={i === highlightedIndex}
+                    onClick={() => {
+                      setAiQuery(item.programName)
+                      setShowAutocomplete(false)
+                    }}
+                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+                      i === highlightedIndex
+                        ? 'bg-[var(--bg-primary)]/10'
+                        : 'hover:bg-[var(--bg-dark)]'
+                    } ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-white truncate">{item.programName}</div>
+                      <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                        {item.universityName} ({item.universityAcronym})
                       </div>
-                      <div className="flex flex-col items-end shrink-0 gap-1">
-                        {item.deadline && (
-                          <span className="text-[10px]" style={{ color: urgency.color }}>{urgency.label}</span>
-                        )}
-                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
-                          item.status === 'Aberto'
-                            ? 'border-green-500/20 bg-green-500/10 text-green-400'
-                            : item.status === 'Em Breve'
-                              ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
-                              : 'border-red-500/20 bg-red-500/10 text-red-400'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="mt-3 flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
-          >
-            {showAdvancedFilters ? '▲' : '▼'} Advanced filters
-          </button>
-
-          {showAdvancedFilters && (
-            <div className="mt-3 space-y-4 border-t border-[var(--border)] pt-4">
-              <div>
-                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Level</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setLevel('')}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                      !level
-                        ? 'border-white bg-white/10 text-white'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    Any level
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      {item.deadline && (
+                        <span className="text-[10px]" style={{ color: urgency.color }}>{urgency.label}</span>
+                      )}
+                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                        item.status === 'Aberto'
+                          ? 'border-green-500/20 bg-green-500/10 text-green-400'
+                          : item.status === 'Em Breve'
+                            ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                            : 'border-red-500/20 bg-red-500/10 text-red-400'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
                   </button>
-                  {(['Mestrado', 'Doutorado', 'Ambos'] as const).map((l) => (
-                    <button
-                      key={l}
-                      onClick={() => setLevel(l)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        level === l
-                          ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
-                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      {l === 'Ambos' ? 'Both' : l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Region</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setRegion('')}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                      !region
-                        ? 'border-white bg-white/10 text-white'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    Any region
-                  </button>
-                  {REGIONS.map((r) => (
-                    <button
-                      key={r.key}
-                      onClick={() => setRegion(r.key)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        region === r.key
-                          ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
-                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      {r.key}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">University type</label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setType('')}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                      !type
-                        ? 'border-white bg-white/10 text-white'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    Any type
-                  </button>
-                  {UNIVERSITY_TYPES.map((t) => (
-                    <button
-                      key={t.key}
-                      onClick={() => setType(t.key)}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        type === t.key
-                          ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
-                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                )
+              })}
             </div>
           )}
-
-          <button
-            onClick={() => setShowResults(true)}
-            className="mt-4 w-full rounded-lg bg-[var(--bg-accent)] py-2.5 text-sm font-medium text-black hover:bg-[var(--bg-accent)]/90 transition-colors"
-          >
-            Search
-          </button>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">
-            Search across {allPrograms.length} programs from {new Set(allPrograms.map(p => p.university_name)).size} universities
-          </p>
         </div>
-      )}
+
+        <button
+          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          className="mt-3 flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+        >
+          {showAdvancedFilters ? '▲' : '▼'} Advanced filters
+        </button>
+
+        {showAdvancedFilters && (
+          <div className="mt-3 space-y-4 border-t border-[var(--border)] pt-4">
+            <div>
+              <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Level</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setLevel('')}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                    !level
+                      ? 'border-white bg-white/10 text-white'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  Any level
+                </button>
+                {(['Mestrado', 'Doutorado', 'Ambos'] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLevel(l)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      level === l
+                        ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                    }`}
+                  >
+                    {l === 'Ambos' ? 'Both' : l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">Region</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setRegion('')}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                    !region
+                      ? 'border-white bg-white/10 text-white'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  Any region
+                </button>
+                {REGIONS.map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setRegion(r.key)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      region === r.key
+                        ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                    }`}
+                  >
+                    {r.key}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[11px] font-medium text-[var(--text-muted)]">University type</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setType('')}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                    !type
+                      ? 'border-white bg-white/10 text-white'
+                      : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  Any type
+                </button>
+                {UNIVERSITY_TYPES.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setType(t.key)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                      type === t.key
+                        ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
+                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Active filter bar */}
-      {showResults && (
+      {hasActiveFilters && (
         <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-[var(--text-muted)]">Filters:</span>
             {level && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{level === 'Ambos' ? 'Both' : level}</span>}
             {region && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{region}</span>}
             {type && <span className="rounded-full bg-[var(--bg-primary)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-primary)]">{type}</span>}
+            {openOnly && <span className="rounded-full bg-green-500/10 px-2.5 py-1 text-[11px] text-green-400">Open only</span>}
             {searchTokens && searchTokens.length > 0 && (
               <span className="rounded-full bg-[var(--bg-accent)]/10 px-2.5 py-1 text-[11px] text-[var(--bg-accent)] truncate max-w-[160px]">
                 "{aiQuery}"
               </span>
             )}
             <button
-              onClick={() => { setShowResults(false); setCompareIds(new Set()); setExpandedId(null) }}
+              onClick={() => { setLevel(''); setRegion(''); setType(''); setOpenOnly(false); setAiQuery(''); setCompareIds(new Set()); setExpandedId(null); setResultLimit(20); }}
               className="ml-auto text-xs text-[var(--text-muted)] hover:text-white transition-colors"
             >
-              Change filters
+              Reset
             </button>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -639,10 +531,9 @@ export default function MatchingPage() {
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               className="rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-2.5 py-1 text-[11px] text-white outline-none"
             >
-              <option value="score">Best Match</option>
+              <option value="status">Status (open first)</option>
               <option value="deadline">Deadline (soonest)</option>
               <option value="name">Name A-Z</option>
-              <option value="status">Status (open first)</option>
             </select>
             {compareIds.size >= 2 && (
               <button
@@ -652,22 +543,12 @@ export default function MatchingPage() {
                 Clear compare
               </button>
             )}
-            <button
-              onClick={saveCurrentSearch}
-              className="text-[11px] text-[var(--bg-primary)] hover:underline transition-colors"
-              title="Save current filters to restore later"
-            >
-              Save Search
-            </button>
-            {showSavedSearchFeedback && (
-              <span className="text-[11px] text-green-400">Saved!</span>
-            )}
           </div>
         </div>
       )}
 
       {/* Loading */}
-      {showResults && loading && (
+      {loading && (
         <div className="flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-3">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--bg-primary)]" />
@@ -677,7 +558,7 @@ export default function MatchingPage() {
       )}
 
       {/* Results */}
-      {showResults && !loading && results.length > 0 && (
+      {!loading && results.length > 0 && (
         <div>
           <h2 className="mb-4 text-lg font-semibold text-white">
             {results.length} program{results.length !== 1 ? 's' : ''} found
@@ -701,7 +582,6 @@ export default function MatchingPage() {
                   }`}
                 >
                   <div className="flex items-start gap-2">
-                    {/* Compare checkbox */}
                     <label className="mt-1 cursor-pointer shrink-0" title="Select to compare">
                       <input
                         type="checkbox"
@@ -717,11 +597,6 @@ export default function MatchingPage() {
                             className="h-2 w-2 shrink-0 rounded-full"
                             style={{ backgroundColor: regColor }}
                           />
-                          {sortBy === 'score' && r.matchScore === results[0].matchScore && (
-                            <span className="rounded bg-[var(--bg-accent)]/20 px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg-accent)] shrink-0">
-                              BEST MATCH
-                            </span>
-                          )}
                           <h3 className="text-sm font-semibold text-white hover:text-[var(--bg-primary)] transition-colors truncate">
                             {r.programName}
                           </h3>
@@ -749,7 +624,6 @@ export default function MatchingPage() {
                         </div>
                       </Link>
 
-                      {/* Expanded detail */}
                       {isExpanded && (
                         <div className="mt-3 border-t border-[var(--border)] pt-3 space-y-1.5">
                           {r.edital_url && (
@@ -766,16 +640,11 @@ export default function MatchingPage() {
                             <span>Level: {r.level}</span>
                             <span>Field: {r.field}</span>
                             <span>Region: {r.region}</span>
-                            <span>Score: {r.matchScore}%</span>
                           </div>
                         </div>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-[var(--bg-primary)]">{r.matchScore}%</div>
-                        <div className="text-[10px] text-[var(--text-muted)]">match</div>
-                      </div>
                       <button
                         onClick={() => toggleSave(r)}
                         className={`text-xs font-medium transition-colors ${
@@ -801,7 +670,7 @@ export default function MatchingPage() {
               )
             })}
           </div>
-          {/* Comparison table */}
+
           {compareIds.size >= 2 && (
             <div className="mt-8 rounded-xl border border-[var(--bg-accent)]/30 bg-[var(--bg-card)] p-5">
               <div className="mb-4 flex items-center justify-between">
@@ -825,14 +694,13 @@ export default function MatchingPage() {
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Program', get: (r: ProgramMatch) => r.programName },
-                      { label: 'University', get: (r: ProgramMatch) => `${r.universityName} (${r.universityAcronym})` },
-                      { label: 'Level', get: (r: ProgramMatch) => r.level },
-                      { label: 'Field', get: (r: ProgramMatch) => r.field },
-                      { label: 'Region', get: (r: ProgramMatch) => r.region },
-                      { label: 'Status', get: (r: ProgramMatch) => r.status },
-                      { label: 'Deadline', get: (r: ProgramMatch) => r.deadline ? formatDate(r.deadline) : 'TBD' },
-                      { label: 'Score', get: (r: ProgramMatch) => `${r.matchScore}%` },
+                      { label: 'Program', get: (r: ProgramResult) => r.programName },
+                      { label: 'University', get: (r: ProgramResult) => `${r.universityName} (${r.universityAcronym})` },
+                      { label: 'Level', get: (r: ProgramResult) => r.level },
+                      { label: 'Field', get: (r: ProgramResult) => r.field },
+                      { label: 'Region', get: (r: ProgramResult) => r.region },
+                      { label: 'Status', get: (r: ProgramResult) => r.status },
+                      { label: 'Deadline', get: (r: ProgramResult) => r.deadline ? formatDate(r.deadline) : 'TBD' },
                     ].map(row => (
                       <tr key={row.label} className="border-b border-[var(--border)] last:border-0">
                         <td className="py-2 pr-4 text-[var(--text-muted)] whitespace-nowrap">{row.label}</td>
@@ -858,28 +726,13 @@ export default function MatchingPage() {
         </div>
       )}
 
-      {showResults && !loading && results.length === 0 && (
+      {!loading && results.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16" role="alert">
           <p className="text-sm text-[var(--text-muted)]">
-            No programs match your criteria. Try broadening your filters.
+            {hasActiveFilters
+              ? 'No programs match your criteria. Try broadening your filters.'
+              : 'Start typing above to search across all graduate programs.'}
           </p>
-          <button
-            onClick={() => {
-              setLevel('')
-              setRegion('')
-              setType('')
-              setSortBy('score')
-              setOpenOnly(false)
-              setAiQuery('')
-              setResultLimit(20)
-              setShowResults(false)
-              setCompareIds(new Set())
-              setExpandedId(null)
-            }}
-            className="mt-2 text-xs text-[var(--bg-primary)] hover:underline"
-          >
-            Reset filters
-          </button>
         </div>
       )}
     </div>
