@@ -41,8 +41,7 @@ export default function HomePage() {
 
   const statItems = [
     { value: stats.universityCount.toString(), label: 'Universities' },
-    { value: stats.programCount.toString(), label: 'Graduate Programs' },
-    { value: stats.openProgramCount.toString(), label: 'Open Now' },
+    { value: '2000+', label: 'Graduate Programs' },
     { value: `${ALL_STATES.length}`, label: 'States + DF' },
   ]
 
@@ -80,11 +79,11 @@ export default function HomePage() {
 
         {/* Stats */}
         <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-live="polite" aria-label="Live statistics">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-live="polite" aria-label="Live statistics">
             {statItems.map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-center"
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 text-center transition-all hover:border-[var(--bg-primary)]/30 hover:bg-[var(--bg-card)]/80"
               >
                 <div className="text-2xl font-bold text-white">{stat.value}</div>
                 <div className="text-xs text-[var(--text-muted)]">{stat.label}</div>
