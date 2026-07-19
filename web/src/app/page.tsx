@@ -6,6 +6,7 @@ import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
 import { formatDate, slugify, daysUntil, getDeadlineUrgency } from '@/lib/utils'
 import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
+import SplashNotice from '@/components/SplashNotice'
 import type { ProgramWithUniversity } from '@/lib/types'
 
 function useLiveStats() {
@@ -47,6 +48,7 @@ export default function HomePage() {
 
   return (
     <div>
+      <SplashNotice />
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-[var(--border)]">
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-primary)]/5 via-transparent to-[var(--bg-secondary)]/5" />
