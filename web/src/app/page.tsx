@@ -70,10 +70,10 @@ export default function HomePage() {
                 Browse Universities
               </Link>
               <Link
-                href="/universities"
+                href="/map"
                 className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/5"
               >
-                View All Universities
+                Explore Map
               </Link>
             </div>
           </div>
