@@ -257,7 +257,9 @@ export default function MatchingPage() {
     allPrograms.forEach((p) => {
       if (region && p.university_region !== region) return
       if (type && p.university_type !== type) return
-      if (openOnly && p.status !== 'Aberto') return
+
+      const effectiveStatus = p.deadline && new Date(p.deadline) < new Date() ? 'Fechado' : p.status
+      if (openOnly && effectiveStatus !== 'Aberto') return
 
       if (searchTokens && searchTokens.length > 0) {
         const haystack = normalize(`${p.name} ${p.field || ''} ${p.university_name} ${p.university_acronym}`)
@@ -281,7 +283,7 @@ export default function MatchingPage() {
         level: p.level,
         field: p.field || 'General',
         region: p.university_region,
-        status: p.status,
+        status: effectiveStatus,
         matchScore: Math.min(score, 99),
         deadline: p.deadline,
         edital_url: p.edital_url,
