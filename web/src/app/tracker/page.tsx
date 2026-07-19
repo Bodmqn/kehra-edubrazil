@@ -22,7 +22,7 @@ export default function TrackerPage() {
     }
     return []
   })
-  const mounted = useSyncExternalStore(() => () => {}, () => true)
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => true)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'deadline' | 'name' | 'priority' | 'updated'>('deadline')
   const [stageFilter, setStageFilter] = useState<'all' | (typeof STAGES)[number]['key']>('all')
