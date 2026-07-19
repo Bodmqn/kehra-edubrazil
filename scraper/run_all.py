@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 from sigaa_parser import SIGAAParser
-from custom_portal_parsers import run_custom_parsers
+from custom_portal_parsers import run_custom_parsers, REGISTRY
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +29,14 @@ def run():
     universities = supabase.table("universities").select("*").execute().data
     logger.info(f"Loaded {len(universities)} universities")
 
-    sigaa = SIGAAParser(supabase)
+    claimed_ids = {
+        str(u["id"]) for u in universities
+        if u.get("acronym") in REGISTRY
+    }
+    if claimed_ids:
+        logger.info(f"Claimed by custom parsers (SIGAA skip): {claimed_ids}")
+
+    sigaa = SIGAAParser(supabase, skip_ids=claimed_ids)
     sigaa_programs = 0
     try:
         sigaa_programs = sigaa.run()

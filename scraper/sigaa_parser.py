@@ -25,10 +25,36 @@ BASE_PATHS = [
 BATCH_SIZE = 50
 MAX_RETRIES = 3
 
+# Prefixes to strip from raw program names (case-insensitive)
+NAME_CLEANUP_PREFIXES = [
+    r"notice of selection",
+    r"edital (n[oº]?\s*)?\d+[\/\-\s]*\d{4}\s*[:\-–—]?\s*",
+    r"edital de seleção",
+    r"processo seletivo",
+    r"aviso de (seleção|abertura)",
+    r"chamada (pública|para seleção)",
+    r"resultado final",
+    r"homologação",
+    r"seleção (para|de)?",
+    r"inscrições (para|abertas)?",
+]
+
+# Suffixes to strip
+NAME_CLEANUP_SUFFIXES = [
+    r"selection",
+    r"processo seletivo",
+    r"edital de seleção",
+    r"chamada pública",
+    r"seleção (para|de)?\s*",
+    r"inscrições (abertas|para)?\s*",
+    r"(mestrado|doutorado)\s*(profissional)?\s*(acadêmico)?\s*$",
+]
+
 
 class SIGAAParser:
-    def __init__(self, supabase: Client):
+    def __init__(self, supabase: Client, skip_ids: set[str] | None = None):
         self.supabase = supabase
+        self.skip_ids = skip_ids or set()
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "KehraEduBrazil/1.0 (University scraper; contact@kehra.com.br)"
@@ -83,6 +109,16 @@ class SIGAAParser:
         netloc = parsed.netloc or parsed.hostname or ""
         return f"{scheme}://{netloc}{path}" if path else f"{scheme}://{netloc}"
 
+    def _clean_name(self, raw: str) -> str:
+        cleaned = raw.strip()
+        for pattern in NAME_CLEANUP_PREFIXES:
+            cleaned = re.sub(rf"^(?:{pattern})\s*[:\-–—]?\s*", "", cleaned, flags=re.IGNORECASE).strip()
+        for pattern in NAME_CLEANUP_SUFFIXES:
+            cleaned = re.sub(rf"\s*[:\-–—]?\s*(?:{pattern})\s*$", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+        cleaned = re.sub(r"\s*[:\-–—]+\s*", " ", cleaned).strip()
+        return cleaned or raw
+
     def resolve_sigaa_url(self, base_url: str) -> Optional[str]:
         normalized = self._normalize_sigaa_url(base_url)
         for path in BASE_PATHS:
@@ -129,12 +165,13 @@ class SIGAAParser:
 
     def _parse_row(self, cells: list, base_url: str) -> Optional[dict]:
         try:
-            name = cells[0].get_text(strip=True)
+            raw_name = cells[0].get_text(strip=True)
             level = "Ambos"
-            if "MESTRADO" in name.upper():
+            if "MESTRADO" in raw_name.upper():
                 level = "Mestrado"
-            elif "DOUTORADO" in name.upper():
+            elif "DOUTORADO" in raw_name.upper():
                 level = "Doutorado"
+            name = self._clean_name(raw_name)
 
             status = "Aberto"
             for cell in cells:
@@ -196,6 +233,10 @@ class SIGAAParser:
 
             if not self.is_sigaa_url(sigaa):
                 logger.info(f"Skipping {uni['name']} ({uni['acronym']}): not a SIGAA URL (needs custom parser)")
+                continue
+
+            if str(uni["id"]) in self.skip_ids:
+                logger.info(f"Skipping {uni['name']} ({uni['acronym']}): claimed by custom parser")
                 continue
 
             if "lista.jsf" in sigaa:

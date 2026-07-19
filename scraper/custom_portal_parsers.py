@@ -163,6 +163,98 @@ def parse_uerr(supabase, uni: dict) -> int:
     return count
 
 
+# ── Parser: UFCA (SIGAA) ──────────────────────────────────
+
+UFCA_SIGAA_URL = "https://sig.ufca.edu.br/sigaa/public/processo_seletivo/lista.jsf?aba=p-stricto&nivel=S"
+
+@register("UFCA")
+def parse_ufca(supabase, uni: dict) -> int:
+    logger.info(f"UFCA: scraping {uni['name']}")
+
+    from sigaa_parser import NAME_CLEANUP_PREFIXES, NAME_CLEANUP_SUFFIXES
+
+    html = _fetch(UFCA_SIGAA_URL, timeout=30)
+    if not html:
+        return 0
+
+    soup = BeautifulSoup(html, "lxml")
+    table = soup.find("table", class_=re.compile(r"listagem", re.I))
+    if not table:
+        possible = soup.find_all("table")
+        table = possible[0] if possible else None
+    if not table:
+        logger.warning("  UFCA: no table found")
+        return 0
+
+    programs = []
+    for row in table.find_all("tr")[1:]:
+        cells = row.find_all("td")
+        if len(cells) < 3:
+            continue
+
+        raw_name = cells[0].get_text(strip=True)
+        if not raw_name or len(raw_name) < 5:
+            continue
+
+        text = " ".join(c.get_text(strip=True) for c in cells)
+
+        level = "Ambos"
+        if "MESTRADO" in raw_name.upper():
+            level = "Mestrado"
+        elif "DOUTORADO" in raw_name.upper():
+            level = "Doutorado"
+
+        status = "Aberto"
+        for cell in cells:
+            upper = cell.get_text(strip=True).upper()
+            if "FECHADO" in upper or "ENCERRADO" in upper:
+                status = "Fechado"
+            elif "EM BREVE" in upper or "PROXIMAMENTE" in upper:
+                status = "Em Breve"
+
+        deadline = None
+        for cell in cells:
+            m = re.search(r"(\d{2})/(\d{2})/(\d{4})", cell.get_text(strip=True))
+            if m:
+                deadline = f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+
+        edital_url = None
+        for cell in cells:
+            link = cell.find("a", href=re.compile(r"\.pdf", re.I))
+            if link:
+                href = link.get("href", "")
+                edital_url = href if href.startswith("http") else urljoin(UFCA_SIGAA_URL, href)
+
+        # Clean the name using the same patterns from the generic SIGAA parser
+        name = raw_name
+        for pattern in NAME_CLEANUP_PREFIXES:
+            name = re.sub(rf"^(?:{pattern})\s*[:\-–—]?\s*", "", name, flags=re.IGNORECASE).strip()
+        for pattern in NAME_CLEANUP_SUFFIXES:
+            name = re.sub(rf"\s*[:\-–—]?\s*(?:{pattern})\s*$", "", name, flags=re.IGNORECASE).strip()
+        name = re.sub(r"\s{2,}", " ", name).strip()
+        name = re.sub(r"\s*[:\-–—]+\s*", " ", name).strip()
+        if not name:
+            name = raw_name
+
+        programs.append({
+            "name": name,
+            "level": level,
+            "field": None,
+            "deadline": deadline,
+            "status": status,
+            "edital_url": edital_url,
+        })
+
+    if not programs:
+        return 0
+
+    # Replace old entries for this university
+    supabase.table("programs").delete().eq("university_id", uni["id"]).execute()
+    count = _upsert_programs(supabase, uni, programs)
+    logger.info(f"  UFCA: {count} programs")
+    return count
+
+
 # ── Generic edital table parser ───────────────────────────
 
 def try_generic_edital_table(supabase, uni: dict) -> int:
