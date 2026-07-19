@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import SkipLink from '@/components/SkipLink'
+import GeneralNoticeBar from '@/components/GeneralNoticeBar'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--bg-dark)] font-sans text-white">
         <SkipLink />
         <Navbar />
+        <GeneralNoticeBar />
         <main id="main-content" className="pt-16" tabIndex={-1}>
           {children}
         </main>
