@@ -56,7 +56,6 @@ export const NAV_ITEMS = [
   { label: 'Home', href: '/' },
   { label: 'Universities', href: '/universities' },
   { label: 'Map', href: '/map' },
-  { label: 'Program Search', href: '/programs' },
   { label: 'My Tracker', href: '/tracker' },
   { label: 'About', href: '/about' },
 ]

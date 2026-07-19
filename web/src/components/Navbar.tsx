@@ -39,13 +39,6 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/programs"
-            className="rounded-lg bg-[var(--bg-primary)] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-            aria-label="Search graduate programs"
-          >
-            Search Programs
-          </Link>
         </div>
       </div>
     </header>

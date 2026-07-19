@@ -70,10 +70,10 @@ export default function HomePage() {
                 Browse Universities
               </Link>
               <Link
-                href="/programs"
+                href="/universities"
                 className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/5"
               >
-                Search Programs
+                View All Universities
               </Link>
             </div>
           </div>
@@ -225,10 +225,10 @@ export default function HomePage() {
             Start exploring graduate opportunities across Brazil right now
           </p>
           <Link
-            href="/programs"
+            href="/universities"
             className="rounded-lg bg-[var(--bg-accent)] px-6 py-3 text-sm font-medium text-black transition-opacity hover:opacity-90"
           >
-            Search Programs
+            Browse Universities
           </Link>
         </div>
       </section>

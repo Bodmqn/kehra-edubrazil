@@ -95,7 +95,7 @@ export default function AboutPage() {
         <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
           So we built EduBrazil Hub + The Kehra — a platform that lets students explore Masters and
           PhD programs across 109 Brazilian universities, spanning all five regions and both federal
-          and state institutions, with live deadline tracking, program search, and an interactive
+          and state institutions, with live deadline tracking and an interactive
           map, all in one place.
         </p>
       </section>
