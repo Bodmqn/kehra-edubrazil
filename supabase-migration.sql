@@ -1,5 +1,5 @@
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard/project/gjhzuxxexzptldpilfzz/sql/new)
--- It's safe to run multiple times (uses IF NOT EXISTS)
+-- It's safe to run multiple times (uses IF NOT EXISTS + DROP POLICY IF EXISTS)
 
 -- ============================================================
 -- 1. Email subscriptions
@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS email_subscriptions (
 );
 
 ALTER TABLE email_subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous insert" ON email_subscriptions;
 CREATE POLICY "Allow anonymous insert" ON email_subscriptions
   FOR INSERT TO anon
   WITH CHECK (true);
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can check if they are an admin
+DROP POLICY IF EXISTS "Allow authenticated SELECT on admin_users" ON admin_users;
 CREATE POLICY "Allow authenticated SELECT on admin_users"
   ON admin_users FOR SELECT TO authenticated
   USING (true);
@@ -46,24 +48,29 @@ CREATE TABLE IF NOT EXISTS general_notices (
 ALTER TABLE general_notices ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read active notices
+DROP POLICY IF EXISTS "Allow anon SELECT on general_notices" ON general_notices;
 CREATE POLICY "Allow anon SELECT on general_notices"
   ON general_notices FOR SELECT TO anon
   USING (active = true);
 
 -- Admins can read all notices (including inactive)
+DROP POLICY IF EXISTS "Allow authenticated SELECT all on general_notices" ON general_notices;
 CREATE POLICY "Allow authenticated SELECT all on general_notices"
   ON general_notices FOR SELECT TO authenticated
   USING (true);
 
 -- Admins can insert/update/delete notices
+DROP POLICY IF EXISTS "Allow admin INSERT on general_notices" ON general_notices;
 CREATE POLICY "Allow admin INSERT on general_notices"
   ON general_notices FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin UPDATE on general_notices" ON general_notices;
 CREATE POLICY "Allow admin UPDATE on general_notices"
   ON general_notices FOR UPDATE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin DELETE on general_notices" ON general_notices;
 CREATE POLICY "Allow admin DELETE on general_notices"
   ON general_notices FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
@@ -73,37 +80,45 @@ CREATE POLICY "Allow admin DELETE on general_notices"
 -- ============================================================
 
 -- Universities (admin can update URLs)
+DROP POLICY IF EXISTS "Allow admin UPDATE on universities" ON universities;
 CREATE POLICY "Allow admin UPDATE on universities"
   ON universities FOR UPDATE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
 -- University details (admin can edit about, history, etc.)
+DROP POLICY IF EXISTS "Allow admin INSERT on university_details" ON university_details;
 CREATE POLICY "Allow admin INSERT on university_details"
   ON university_details FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin UPDATE on university_details" ON university_details;
 CREATE POLICY "Allow admin UPDATE on university_details"
   ON university_details FOR UPDATE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
 -- Programs (admin can CRUD)
+DROP POLICY IF EXISTS "Allow admin INSERT on programs" ON programs;
 CREATE POLICY "Allow admin INSERT on programs"
   ON programs FOR INSERT TO authenticated
   WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin UPDATE on programs" ON programs;
 CREATE POLICY "Allow admin UPDATE on programs"
   ON programs FOR UPDATE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin DELETE on programs" ON programs;
 CREATE POLICY "Allow admin DELETE on programs"
   ON programs FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
 -- Email subscriptions (admin can view and delete)
+DROP POLICY IF EXISTS "Allow admin SELECT on email_subscriptions" ON email_subscriptions;
 CREATE POLICY "Allow admin SELECT on email_subscriptions"
   ON email_subscriptions FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
 
+DROP POLICY IF EXISTS "Allow admin DELETE on email_subscriptions" ON email_subscriptions;
 CREATE POLICY "Allow admin DELETE on email_subscriptions"
   ON email_subscriptions FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
