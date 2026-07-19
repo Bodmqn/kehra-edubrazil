@@ -6,10 +6,6 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import type { University, Program } from '@/lib/types'
 
-function generateId() {
-  return Math.random().toString(36).slice(2, 10)
-}
-
 interface FormState {
   name: string
   level: 'Mestrado' | 'Doutorado' | 'Ambos'

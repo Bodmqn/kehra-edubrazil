@@ -16,17 +16,15 @@ export default function AdminSubscribersPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
-    fetchSubscribers()
-  }, [])
-
-  async function fetchSubscribers() {
-    const { data } = await supabase
+    supabase
       .from('email_subscriptions')
       .select('*')
       .order('created_at', { ascending: false })
-    setSubscribers((data ?? []) as Subscriber[])
-    setLoading(false)
-  }
+      .then(({ data }) => {
+        setSubscribers((data ?? []) as Subscriber[])
+        setLoading(false)
+      })
+  }, [])
 
   const handleDelete = async (id: string, email: string) => {
     if (!window.confirm(`Remove ${email} from subscribers?`)) return

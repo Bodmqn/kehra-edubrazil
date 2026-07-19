@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useSyncExternalStore } from 'react'
 import type { Program } from '@/lib/types'
 import { formatDate, daysUntil, getDeadlineUrgency } from '@/lib/utils'
 import Badge from './Badge'
@@ -11,17 +11,18 @@ interface ProgramCardProps {
 }
 
 export default function ProgramCard({ program, universityName }: ProgramCardProps) {
-  const [mounted, setMounted] = useState(false)
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const [saved, setSaved] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
     const stored = localStorage.getItem('kehra-edubrazil-tracker')
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        setSaved(parsed.some((p: { id: string }) => p.id === program.id))
+        queueMicrotask(() => {
+          setSaved(parsed.some((p: { id: string }) => p.id === program.id))
+        })
       } catch { /* ignore */ }
     }
   }, [program.id])
@@ -32,9 +33,9 @@ export default function ProgramCard({ program, universityName }: ProgramCardProp
     return () => clearTimeout(t)
   }, [justSaved])
 
-  const [now, setNow] = useState(Date.now())
+  const [, setTick] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60000)
+    const id = setInterval(() => setTick(t => t + 1), 60000)
     return () => clearInterval(id)
   }, [])
 

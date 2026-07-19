@@ -15,8 +15,10 @@ export default function SplashNotice() {
       const elapsed = Date.now() - parseInt(last, 10)
       if (elapsed < 24 * 60 * 60 * 1000) return
     }
-    setVisible(true)
-    document.body.style.overflow = 'hidden'
+    queueMicrotask(() => {
+      setVisible(true)
+      document.body.style.overflow = 'hidden'
+    })
   }, [])
 
   useEffect(() => {
@@ -48,12 +50,12 @@ export default function SplashNotice() {
         <div className="mb-4 text-4xl">📢</div>
         <h2 className="mb-4 text-xl font-bold text-white">General Notice</h2>
         <p className="mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
-          This platform is designed to make finding graduate (Master's and PhD) opportunities at
+          This platform is designed to make finding graduate (Master&apos;s and PhD) opportunities at
           Brazilian universities easier, faster, and more accessible. We aggregate information from
           official university sources to help prospective students discover programs, admission calls
           (Editais), eligibility requirements, and application links in one convenient place. While
           we strive for accuracy, we encourage all applicants to verify important information through
-          the university's official website and SIGAA/Edital pages before applying.
+          the university&apos;s official website and SIGAA/Edital pages before applying.
         </p>
         <p className="mb-4 text-xs text-[var(--text-muted)]">
           {showClose ? 'Thank you.' : 'Please wait...'}

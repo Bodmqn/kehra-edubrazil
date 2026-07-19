@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useActiveNotice } from '@/lib/generalNotices'
 
 const STORAGE_PREFIX = 'kehra-notice-dismissed-'
@@ -28,19 +28,16 @@ const TYPE_STYLES = {
 
 export default function GeneralNoticeBar() {
   const notice = useActiveNotice()
-  const [dismissed, setDismissed] = useState(false)
+  const [, forceUpdate] = useState(0)
 
-  useEffect(() => {
-    if (notice) {
-      const key = STORAGE_PREFIX + notice.id
-      setDismissed(localStorage.getItem(key) === 'true')
-    }
-  }, [notice])
+  const dismissed = notice
+    ? localStorage.getItem(STORAGE_PREFIX + notice.id) === 'true'
+    : false
 
   const dismiss = () => {
     if (!notice) return
     localStorage.setItem(STORAGE_PREFIX + notice.id, 'true')
-    setDismissed(true)
+    forceUpdate(v => v + 1)
   }
 
   if (!notice || dismissed) return null

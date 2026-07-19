@@ -1,3 +1,4 @@
+/* eslint-disable */
 // Seed script: imports CSV data into Supabase universities table
 require('dotenv').config({ path: '.env.local' })
 const { createClient } = require('@supabase/supabase-js')

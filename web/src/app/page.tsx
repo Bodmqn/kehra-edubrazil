@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
 import { formatDate, slugify, daysUntil, getDeadlineUrgency } from '@/lib/utils'
 import { useHomeStats, useAllPrograms } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
 import SplashNotice from '@/components/SplashNotice'
-import type { ProgramWithUniversity } from '@/lib/types'
 
 function useLiveStats() {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const stats = useHomeStats()
   return mounted ? stats : { universityCount: 109, programCount: 0, openProgramCount: 0, approachingDeadlineCount: 0, lastScrapeDate: null }
 }
@@ -20,24 +18,22 @@ export default function HomePage() {
   usePageMeta('Home', 'Find Masters and PhD programs across 109 Brazilian universities')
   const stats = useLiveStats()
   const { programs: allPrograms, loading: programsLoading } = useAllPrograms()
-  const [latestPrograms, setLatestPrograms] = useState<ProgramWithUniversity[]>([])
 
-  useEffect(() => {
-    if (!programsLoading && allPrograms.length > 0) {
-      const now = new Date()
-      const upcoming = allPrograms.filter(p => {
-        if (!p.deadline) return false
-        return new Date(p.deadline) >= now
-      })
-      const seen = new Set<string>()
-      const diversified = upcoming.filter(p => {
-        if (seen.size >= 6) return false
-        if (seen.has(p.university_id)) return false
-        seen.add(p.university_id)
-        return true
-      })
-      setLatestPrograms(diversified.length > 0 ? diversified : upcoming.slice(0, 6))
-    }
+  const latestPrograms = useMemo(() => {
+    if (programsLoading || allPrograms.length === 0) return []
+    const now = new Date()
+    const upcoming = allPrograms.filter(p => {
+      if (!p.deadline) return false
+      return new Date(p.deadline) >= now
+    })
+    const seen = new Set<string>()
+    const diversified = upcoming.filter(p => {
+      if (seen.size >= 6) return false
+      if (seen.has(p.university_id)) return false
+      seen.add(p.university_id)
+      return true
+    })
+    return diversified.length > 0 ? diversified : upcoming.slice(0, 6)
   }, [allPrograms, programsLoading])
 
   const statItems = [

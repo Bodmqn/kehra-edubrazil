@@ -24,6 +24,12 @@ const TABS = [
   { key: 'study-guide', label: 'Study Guide' },
 ]
 
+interface QuickFact {
+  label: string
+  value: string
+  link?: string
+}
+
 interface UniversityDetailProps {
   slug: string
   fallbackUniversity: University | null
@@ -186,7 +192,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-6">
           <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 p-4">
             <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university's official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change.
+              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university&apos;s official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change.
             </p>
           </div>
         </div>
@@ -266,7 +272,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white">Available Programs</h3>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  These programs were offered in recent years and are expected to be available again. Use this as a reference to explore the university's graduate offerings.
+                  These programs were offered in recent years and are expected to be available again. Use this as a reference to explore the university&apos;s graduate offerings.
                 </p>
               </div>
               {['Mestrado', 'Doutorado'].map(level => {
@@ -332,7 +338,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     university.sigaa_url
                       ? { label: 'Graduate Portal', value: '', link: university.sigaa_url }
                       : null,
-                  ].filter(Boolean).map((f: any) => (
+                  ].filter((x): x is QuickFact => x != null).map((f) => (
                     <div
                       key={f.label}
                       className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3"
