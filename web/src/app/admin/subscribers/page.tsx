@@ -16,14 +16,18 @@ export default function AdminSubscribersPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
-    supabase
-      .from('email_subscriptions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('email_subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) {
+        setMessage({ type: 'error', text: 'Failed to load subscribers.' })
+      } else {
         setSubscribers((data ?? []) as Subscriber[])
-        setLoading(false)
-      })
+      }
+      setLoading(false)
+    })()
   }, [])
 
   const handleDelete = async (id: string, email: string) => {

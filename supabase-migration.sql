@@ -7,14 +7,24 @@
 CREATE TABLE IF NOT EXISTS email_subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  token UUID DEFAULT gen_random_uuid() UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE email_subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can check if their email exists (for duplicate detection)
+DROP POLICY IF EXISTS "Allow anon SELECT on email_subscriptions" ON email_subscriptions;
+CREATE POLICY "Allow anon SELECT on email_subscriptions"
+  ON email_subscriptions FOR SELECT TO anon
+  USING (true);
+
+-- Anonymous insert with basic email format validation
 DROP POLICY IF EXISTS "Allow anonymous insert" ON email_subscriptions;
 CREATE POLICY "Allow anonymous insert" ON email_subscriptions
   FOR INSERT TO anon
-  WITH CHECK (true);
+  WITH CHECK (email ~* '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
 
 -- ============================================================
 -- 2. Admin users
@@ -111,6 +121,32 @@ DROP POLICY IF EXISTS "Allow admin DELETE on programs" ON programs;
 CREATE POLICY "Allow admin DELETE on programs"
   ON programs FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+
+-- ============================================================
+-- 5. Reminder logs (track sent reminders)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS reminder_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  programs_count INTEGER NOT NULL,
+  recipients_count INTEGER NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE reminder_logs ENABLE ROW LEVEL SECURITY;
+
+-- Auto-update updated_at on row change
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS email_subscriptions_updated_at ON email_subscriptions;
+CREATE TRIGGER email_subscriptions_updated_at
+  BEFORE UPDATE ON email_subscriptions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Email subscriptions (admin can view and delete)
 DROP POLICY IF EXISTS "Allow admin SELECT on email_subscriptions" ON email_subscriptions;

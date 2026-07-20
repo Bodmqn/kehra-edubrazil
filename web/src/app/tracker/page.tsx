@@ -47,7 +47,15 @@ export default function TrackerPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TrackerProgram | null>(null)
   const [email, setEmail] = useState('')
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'duplicate' | 'error'>('idle')
+  const [subscriptionToken, setSubscriptionToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('kehra-sub-token')
+    return null
+  })
+  const [subscribedEmail, setSubscribedEmail] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('kehra-sub-email')
+    return null
+  })
 
   const saveToStorage = (updated: TrackerProgram[]) => {
     setPrograms(updated)
@@ -91,16 +99,84 @@ export default function TrackerPage() {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    const trimmed = email.trim()
+    if (!trimmed) return
     setEmailStatus('sending')
-    try {
-      const { error } = await supabase
-        .from('email_subscriptions')
-        .insert({ email: email.trim() })
-      if (error) throw error
+
+    // Check if already subscribed
+    const { data: existing } = await supabase
+      .from('email_subscriptions')
+      .select('token')
+      .eq('email', trimmed)
+      .maybeSingle()
+
+    if (existing?.token) {
+      localStorage.setItem('kehra-sub-token', existing.token)
+      localStorage.setItem('kehra-sub-email', trimmed)
+      setSubscriptionToken(existing.token)
+      setSubscribedEmail(trimmed)
       setEmailStatus('success')
-    } catch {
+      return
+    }
+
+    // New subscription
+    const { data, error } = await supabase
+      .from('email_subscriptions')
+      .insert({ email: trimmed })
+      .select('token')
+      .single()
+
+    if (error) {
+      if (error.message?.includes('duplicate key')) {
+        // Race condition — another request inserted it first
+        const { data: retry } = await supabase
+          .from('email_subscriptions')
+          .select('token')
+          .eq('email', trimmed)
+          .maybeSingle()
+        if (retry?.token) {
+          localStorage.setItem('kehra-sub-token', retry.token)
+          localStorage.setItem('kehra-sub-email', trimmed)
+          setSubscriptionToken(retry.token)
+          setSubscribedEmail(trimmed)
+          setEmailStatus('success')
+          return
+        }
+      } else if (error.message?.includes('violates row-level security')) {
+        // Email format rejected by RLS
+        setEmailStatus('error')
+        return
+      }
       setEmailStatus('error')
+      return
+    }
+
+    if (data?.token) {
+      localStorage.setItem('kehra-sub-token', data.token)
+      localStorage.setItem('kehra-sub-email', trimmed)
+      setSubscriptionToken(data.token)
+      setSubscribedEmail(trimmed)
+    }
+    setEmailStatus('success')
+  }
+
+  const handleUnsubscribe = async () => {
+    if (!subscriptionToken) return
+    try {
+      const resp = await fetch('/.netlify/functions/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: subscriptionToken }),
+      })
+      if (!resp.ok) throw new Error()
+      localStorage.removeItem('kehra-sub-token')
+      localStorage.removeItem('kehra-sub-email')
+      setSubscriptionToken(null)
+      setSubscribedEmail(null)
+      setEmailStatus('idle')
+      setEmail('')
+    } catch {
+      alert('Failed to unsubscribe. Please try again.')
     }
   }
 
@@ -250,10 +326,22 @@ export default function TrackerPage() {
           Receive notifications when deadlines approach or programs update
         </p>
         {emailStatus === 'success' ? (
-          <p className="text-xs text-[var(--success)]">✅ You&apos;re subscribed! We&apos;ll send reminders for upcoming deadlines.</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-[var(--success)]">
+              ✅ Subscribed{subscribedEmail ? ` as ${subscribedEmail}` : ''}
+            </p>
+            <button
+              onClick={handleUnsubscribe}
+              className="self-start text-xs text-[var(--text-muted)] hover:text-[var(--danger)] hover:underline"
+            >
+              Unsubscribe
+            </button>
+          </div>
         ) : emailStatus === 'error' ? (
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-[var(--danger)]">Something went wrong. Try again or contact support.</p>
+            <p className="text-xs text-[var(--danger)]">
+              Invalid email format or something went wrong. Try again.
+            </p>
             <button
               onClick={() => setEmailStatus('idle')}
               className="self-start text-xs text-[var(--bg-primary)] hover:underline"
