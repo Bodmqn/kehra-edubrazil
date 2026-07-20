@@ -117,7 +117,7 @@ Start preparing your application today!
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Kehra EduBrazil <reminders@kehra.com.br>',
+      from: 'Kehra EduBrazil <onboarding@resend.dev>',
       to: subscriberEmails,
       subject: `📢 ${programs.length} graduate program deadline${programs.length !== 1 ? 's' : ''} approaching this week`,
       text: emailBody,
