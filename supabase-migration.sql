@@ -24,7 +24,7 @@ CREATE POLICY "Allow anon SELECT on email_subscriptions"
 DROP POLICY IF EXISTS "Allow anonymous insert" ON email_subscriptions;
 CREATE POLICY "Allow anonymous insert" ON email_subscriptions
   FOR INSERT TO anon
-  WITH CHECK (email ~* '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
+  WITH CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
 
 -- ============================================================
 -- 2. Admin users

@@ -47,7 +47,8 @@ export default function TrackerPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<TrackerProgram | null>(null)
   const [email, setEmail] = useState('')
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'duplicate' | 'error'>('idle')
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
+  const [emailError, setEmailError] = useState('')
   const [subscriptionToken, setSubscriptionToken] = useState<string | null>(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('kehra-sub-token')
     return null
@@ -128,7 +129,6 @@ export default function TrackerPage() {
 
     if (error) {
       if (error.message?.includes('duplicate key')) {
-        // Race condition — another request inserted it first
         const { data: retry } = await supabase
           .from('email_subscriptions')
           .select('token')
@@ -142,11 +142,8 @@ export default function TrackerPage() {
           setEmailStatus('success')
           return
         }
-      } else if (error.message?.includes('violates row-level security')) {
-        // Email format rejected by RLS
-        setEmailStatus('error')
-        return
       }
+      setEmailError(error.message || 'Unknown error')
       setEmailStatus('error')
       return
     }
@@ -340,10 +337,10 @@ export default function TrackerPage() {
         ) : emailStatus === 'error' ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-[var(--danger)]">
-              Invalid email format or something went wrong. Try again.
+              {emailError || 'Something went wrong. Try again.'}
             </p>
             <button
-              onClick={() => setEmailStatus('idle')}
+              onClick={() => { setEmailStatus('idle'); setEmailError('') }}
               className="self-start text-xs text-[var(--bg-primary)] hover:underline"
             >
               Try again
