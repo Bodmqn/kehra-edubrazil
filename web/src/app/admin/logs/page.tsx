@@ -12,32 +12,39 @@ interface LogWithUniversity extends ScrapeLog {
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState<LogWithUniversity[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'error' | 'partial'>('all')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase
-        .from('scrape_logs')
-        .select('*, universities(name, acronym)')
-        .order('scraped_at', { ascending: false })
+      try {
+        const { data, error } = await supabase
+          .from('scrape_logs')
+          .select('*, universities(name, acronym)')
+          .order('scraped_at', { ascending: false })
 
-      if (data) {
-        setLogs(
-          (data as Record<string, unknown>[]).map((l) => {
-            const uni = l.universities as Record<string, unknown> | null
-            return {
-              id: l.id as string,
-              university_id: l.university_id as string,
-              status: l.status as ScrapeLog['status'],
-              programs_found: l.programs_found as number,
-              errors: l.errors as string | null,
-              scraped_at: l.scraped_at as string,
-              university_name: (uni?.name as string) ?? 'Unknown',
-              university_acronym: (uni?.acronym as string) ?? '',
-            }
-          })
-        )
+        if (error) throw error
+
+        if (data) {
+          setLogs(
+            (data as Record<string, unknown>[]).map((l) => {
+              const uni = l.universities as Record<string, unknown> | null
+              return {
+                id: l.id as string,
+                university_id: l.university_id as string,
+                status: l.status as ScrapeLog['status'],
+                programs_found: l.programs_found as number,
+                errors: l.errors as string | null,
+                scraped_at: l.scraped_at as string,
+                university_name: (uni?.name as string) ?? 'Unknown',
+                university_acronym: (uni?.acronym as string) ?? '',
+              }
+            })
+          )
+        }
+      } catch (e) {
+        setFetchError(e instanceof Error ? e.message : 'Failed to load logs.')
       }
       setLoading(false)
     }
@@ -63,10 +70,8 @@ export default function AdminLogsPage() {
     return <p className="text-sm text-[var(--text-muted)]">Loading logs…</p>
   }
 
-  const statusColors: Record<string, string> = {
-    success: 'var(--success)',
-    error: 'var(--danger)',
-    partial: 'var(--warning)',
+  if (fetchError) {
+    return <p className="text-sm text-[var(--danger)]">{fetchError}</p>
   }
 
   return (
@@ -118,7 +123,11 @@ export default function AdminLogsPage() {
                     <span className="ml-1 text-[var(--text-muted)]">({l.university_acronym})</span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: statusColors[l.status], backgroundColor: statusColors[l.status] + '15' }}>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      l.status === 'success' ? 'bg-[var(--success)]/10 text-[var(--success)]' :
+                      l.status === 'error' ? 'bg-[var(--danger)]/10 text-[var(--danger)]' :
+                      'bg-[var(--warning)]/10 text-[var(--warning)]'
+                    }`}>
                       {l.status}
                     </span>
                   </td>

@@ -1,8 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { University } from '@/lib/types'
 import { slugify } from '@/lib/utils'
+import type { TrackerProgram } from '@/lib/trackerTypes'
+import { STORAGE_KEY } from '@/lib/trackerTypes'
+import { REGIONS } from '@/lib/constants'
 import Badge from './Badge'
 
 interface UniversityCardProps {
@@ -10,15 +14,23 @@ interface UniversityCardProps {
   programCount?: number
 }
 
-const regionColors: Record<string, string> = {
-  Norte: '#009739',
-  Nordeste: '#FEDD00',
-  'Centro-Oeste': '#002776',
-  Sudeste: '#FF6B35',
-  Sul: '#7C3AED',
-}
+const regionColors: Record<string, string> = Object.fromEntries(
+  REGIONS.map((r) => [r.key, r.color])
+)
 
 export default function UniversityCard({ university, programCount }: UniversityCardProps) {
+  const [inTracker] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (!raw) return false
+      const programs: TrackerProgram[] = JSON.parse(raw)
+      return programs.some((p) => p.university === university.name)
+    } catch {
+      return false
+    }
+  })
+
   return (
     <Link
       href={`/universities/${slugify(university.name)}`}
@@ -28,9 +40,14 @@ export default function UniversityCard({ university, programCount }: UniversityC
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-primary)]/10 text-sm font-bold text-[var(--bg-primary)]">
           {university.acronym.slice(0, 2)}
         </div>
-        <Badge variant="region" color={regionColors[university.region]}>
-          {university.region}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {inTracker && (
+            <span className="text-xs" title="You have saved programs from this university">🔔</span>
+          )}
+          <Badge variant="region" color={regionColors[university.region]}>
+            {university.region}
+          </Badge>
+        </div>
       </div>
 
       <h3 className="mb-1 text-sm font-semibold text-white group-hover:text-[var(--bg-primary)] transition-colors">

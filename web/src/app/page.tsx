@@ -38,7 +38,7 @@ export default function HomePage() {
 
   const statItems = [
     { value: stats.universityCount.toString(), label: 'Universities' },
-    { value: '2000+', label: 'Graduate Programs' },
+    { value: stats.programCount ? `${stats.programCount}+` : '2000+', label: 'Graduate Programs' },
     { value: `${ALL_STATES.length}`, label: 'States + DF' },
   ]
 
@@ -66,10 +66,10 @@ export default function HomePage() {
                 Browse Universities
               </Link>
               <Link
-                href="/map"
+                href="/tracker"
                 className="rounded-lg border border-[var(--border)] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/5"
               >
-                Explore Map
+                My Tracker
               </Link>
             </div>
           </div>

@@ -1,7 +1,7 @@
 export function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[""]/g, '')
+    .replace(/[\u201C\u201D]/g, '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
@@ -22,6 +22,7 @@ export function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null
   const now = new Date()
   const target = new Date(dateStr)
+  if (isNaN(target.getTime())) return null
   const diff = target.getTime() - now.getTime()
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }

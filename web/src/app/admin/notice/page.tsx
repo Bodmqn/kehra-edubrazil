@@ -64,9 +64,23 @@ export default function AdminNoticePage() {
 
   const toggleActive = async (notice: GeneralNotice) => {
     try {
-      // Deactivate all, then activate the selected one
-      await supabase.from('general_notices').update({ active: false }).neq('id', 'none')
-      if (!notice.active) {
+      if (notice.active) {
+        await supabase
+          .from('general_notices')
+          .update({ active: false, updated_at: new Date().toISOString() })
+          .eq('id', notice.id)
+      } else {
+        const { data: current } = await supabase
+          .from('general_notices')
+          .select('id')
+          .eq('active', true)
+          .maybeSingle()
+        if (current) {
+          await supabase
+            .from('general_notices')
+            .update({ active: false })
+            .eq('id', current.id)
+        }
         await supabase
           .from('general_notices')
           .update({ active: true, updated_at: new Date().toISOString() })

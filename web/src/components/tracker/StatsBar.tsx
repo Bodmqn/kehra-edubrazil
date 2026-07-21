@@ -15,7 +15,7 @@ export default function StatsBar({ programs }: StatsBarProps) {
     return d !== null && d < 0
   }).length
   const dueThisMonth = programs.filter((p) => {
-    if (!p.deadline) return false
+    if (!p.deadline || p.stage === 'accepted' || p.stage === 'rejected') return false
     const d = daysUntil(p.deadline)
     return d !== null && d >= 0 && d <= 30
   }).length

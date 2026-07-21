@@ -128,12 +128,14 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   // ── Send emails ──
   const subscriberMap = new Map(subscribers.map(s => [s.token, s.email]))
 
-  // Collect all emails to send (deduplicated)
-  const allEmails = new Set<string>()
-  for (const s of subscribers) allEmails.add(s.email)
+  const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://kehra-edubrazil.netlify.app'
 
+  // Send broadcast (individual emails with personalized unsubscribe link)
   if (broadcastLines.length > 0) {
-    const broadcastBody = `Hi there,
+    const subject = `📢 ${broadcastLines.length} graduate program deadline${broadcastLines.length !== 1 ? 's' : ''} approaching this week`
+
+    for (const s of subscribers) {
+      const broadcastBody = `Hi there,
 
 Here are the upcoming graduate program deadlines at Brazilian universities:
 
@@ -141,24 +143,25 @@ ${broadcastLines.join('\n')}
 
 Start preparing your application today!
 
+To unsubscribe, click: ${siteUrl}/unsubscribe?token=${s.token}
+
 — Kehra • EduBrazil Hub`
 
-    const resendResp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Kehra EduBrazil <onboarding@resend.dev>',
-        to: [...allEmails],
-        subject: `📢 ${broadcastLines.length} graduate program deadline${broadcastLines.length !== 1 ? 's' : ''} approaching this week`,
-        text: broadcastBody,
-      }),
-    })
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Kehra EduBrazil <onboarding@resend.dev>',
+          to: [s.email],
+          subject,
+          text: broadcastBody,
+        }),
+      })
 
-    if (resendResp.ok) {
-      totalSent += allEmails.size
+      if (resp.ok) totalSent++
     }
   }
 
@@ -184,6 +187,8 @@ ${lines.join('\n')}
 
 Log in to your tracker to view details and manage your applications.
 
+To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
+
 — Kehra • EduBrazil Hub`
 
     const resendResp = await fetch('https://api.resend.com/emails', {
@@ -201,9 +206,8 @@ Log in to your tracker to view details and manage your applications.
     })
 
     if (resendResp.ok) {
-      targetedSent += 1
+      targetedSent++
 
-      // Update last_notified_at for these reminders
       const ids = reminders.map(r => r.id)
       await supabase
         .from('user_reminders')

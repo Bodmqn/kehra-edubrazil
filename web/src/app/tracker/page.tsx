@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useSyncExternalStore, useCallback } from 
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import { STAGES, STORAGE_KEY } from '@/lib/trackerTypes'
 import { usePageMeta } from '@/lib/usePageMeta'
-import { supabase } from '@/lib/supabase'
 import {
   getActiveReminders,
   getDismissedReminders,
@@ -172,58 +171,29 @@ export default function TrackerPage() {
     const trimmed = email.trim()
     if (!trimmed) return
     setEmailStatus('sending')
+    setEmailError('')
 
-    // Check if already subscribed
-    const { data: existing } = await supabase
-      .from('email_subscriptions')
-      .select('token')
-      .eq('email', trimmed)
-      .maybeSingle()
+    try {
+      const resp = await fetch('/.netlify/functions/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      })
+      const result = await resp.json()
 
-    if (existing?.token) {
-      localStorage.setItem('kehra-sub-token', existing.token)
-      localStorage.setItem('kehra-sub-email', trimmed)
-      setSubscriptionToken(existing.token)
-      setSubscribedEmail(trimmed)
-      setEmailStatus('success')
-      return
-    }
-
-    // New subscription
-    const { data, error } = await supabase
-      .from('email_subscriptions')
-      .insert({ email: trimmed })
-      .select('token')
-      .single()
-
-    if (error) {
-      if (error.message?.includes('duplicate key')) {
-        const { data: retry } = await supabase
-          .from('email_subscriptions')
-          .select('token')
-          .eq('email', trimmed)
-          .maybeSingle()
-        if (retry?.token) {
-          localStorage.setItem('kehra-sub-token', retry.token)
-          localStorage.setItem('kehra-sub-email', trimmed)
-          setSubscriptionToken(retry.token)
-          setSubscribedEmail(trimmed)
-          setEmailStatus('success')
-          return
-        }
+      if (!resp.ok) {
+        throw new Error(result.error || 'Subscription failed')
       }
-      setEmailError(error.message || 'Unknown error')
-      setEmailStatus('error')
-      return
-    }
 
-    if (data?.token) {
-      localStorage.setItem('kehra-sub-token', data.token)
-      localStorage.setItem('kehra-sub-email', trimmed)
-      setSubscriptionToken(data.token)
-      setSubscribedEmail(trimmed)
+      localStorage.setItem('kehra-sub-token', result.token)
+      localStorage.setItem('kehra-sub-email', result.email)
+      setSubscriptionToken(result.token)
+      setSubscribedEmail(result.email)
+      setEmailStatus('success')
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : 'Something went wrong')
+      setEmailStatus('error')
     }
-    setEmailStatus('success')
   }
 
   const handleUnsubscribe = async () => {

@@ -17,12 +17,17 @@ export default function AdminUniversitiesPage() {
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase
-        .from('universities')
-        .select('*')
-        .order('sno', { ascending: true })
-      if (data) {
-        setUniversities(data as University[])
+      try {
+        const { data, error } = await supabase
+          .from('universities')
+          .select('*')
+          .order('sno', { ascending: true })
+        if (error) throw error
+        if (data) {
+          setUniversities(data as University[])
+        }
+      } catch (e) {
+        setMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to load universities.' })
       }
       setLoading(false)
     }
@@ -209,12 +214,24 @@ export default function AdminUniversitiesPage() {
                           <span className="text-[var(--text-muted)]">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="flex flex-wrap gap-1 px-3 py-2.5">
+                        <Link
+                          href={`/admin/universities/${u.id}/details`}
+                          className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--bg-primary)] hover:text-white"
+                        >
+                          Details
+                        </Link>
+                        <Link
+                          href={`/admin/universities/${u.id}/programs`}
+                          className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--bg-accent)] hover:text-white"
+                        >
+                          Programs
+                        </Link>
                         <button
                           onClick={() => startEdit(u)}
                           className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] hover:text-white"
                         >
-                          Edit URLs
+                          URLs
                         </button>
                       </td>
                     </>

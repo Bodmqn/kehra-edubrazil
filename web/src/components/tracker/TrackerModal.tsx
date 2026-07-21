@@ -21,7 +21,6 @@ function generateId() {
 }
 
 export default function TrackerModal({ open, program, onSave, onClose }: TrackerModalProps) {
-  const isNew = !program
   const formId = useId()
 
   const [name, setName] = useState(() => program?.name ?? '')

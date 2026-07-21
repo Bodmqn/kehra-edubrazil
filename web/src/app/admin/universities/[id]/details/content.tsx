@@ -23,26 +23,32 @@ export default function DetailsContent() {
 
   useEffect(() => {
     async function fetch() {
-      const { data: uni } = await supabase.from('universities').select('*').eq('id', id).single()
-      if (!uni) {
-        router.push('/admin/universities')
-        return
-      }
-      setUniversity(uni as University)
+      try {
+        const { data: uni, error: uniErr } = await supabase.from('universities').select('*').eq('id', id).single()
+        if (uniErr || !uni) {
+          router.push('/admin/universities')
+          return
+        }
+        setUniversity(uni as University)
 
-      const { data: det } = await supabase
-        .from('university_details')
-        .select('*')
-        .eq('university_id', id)
-        .maybeSingle()
+        const { data: det, error: detErr } = await supabase
+          .from('university_details')
+          .select('*')
+          .eq('university_id', id)
+          .maybeSingle()
 
-      if (det) {
-        const d = det as UniversityDetail
-        setDetails(d)
-        setAboutText(d.about_text ?? '')
-        setHistory(d.history ?? '')
-        setWebsiteDescription(d.website_description ?? '')
-        setWikipediaUrl(d.wikipedia_url ?? '')
+        if (detErr) throw detErr
+
+        if (det) {
+          const d = det as UniversityDetail
+          setDetails(d)
+          setAboutText(d.about_text ?? '')
+          setHistory(d.history ?? '')
+          setWebsiteDescription(d.website_description ?? '')
+          setWikipediaUrl(d.wikipedia_url ?? '')
+        }
+      } catch (e) {
+        setMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to load data.' })
       }
       setLoading(false)
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { REGIONS, UNIVERSITY_TYPES, ALL_STATES } from '@/lib/constants'
 import type { Region, UniversityType } from '@/lib/types'
 import SearchInput from '@/components/SearchInput'
@@ -8,14 +8,47 @@ import UniversityCard from '@/components/UniversityCard'
 import { useUniversities, useProgramCounts } from '@/lib/useSupabaseData'
 import { usePageMeta } from '@/lib/usePageMeta'
 
+function getInitialRegions(): Region[] {
+  if (typeof window === 'undefined') return []
+  const params = new URLSearchParams(window.location.search)
+  const regionParam = params.get('region') as Region | null
+  if (regionParam && REGIONS.some((r) => r.key === regionParam)) {
+    return [regionParam]
+  }
+  return []
+}
+
+function getInitialTypes(): UniversityType[] {
+  if (typeof window === 'undefined') return []
+  const params = new URLSearchParams(window.location.search)
+  const typeParam = params.get('type') as UniversityType | null
+  if (typeParam && UNIVERSITY_TYPES.some((t) => t.key === typeParam)) {
+    return [typeParam]
+  }
+  return []
+}
+
 export default function UniversitiesPage() {
   usePageMeta('Universities', 'Browse all Brazilian universities offering graduate programs')
   const { universities, loading } = useUniversities()
   const programCounts = useProgramCounts()
   const [search, setSearch] = useState('')
-  const [selectedRegions, setSelectedRegions] = useState<Region[]>([])
-  const [selectedTypes, setSelectedTypes] = useState<UniversityType[]>([])
+  const [selectedRegions, setSelectedRegions] = useState<Region[]>(getInitialRegions)
+  const [selectedTypes, setSelectedTypes] = useState<UniversityType[]>(getInitialTypes)
   const [selectedState, setSelectedState] = useState<string>('')
+
+  useEffect(() => {
+    if (loading) return
+    const params = new URLSearchParams(window.location.search)
+    const regionParam = params.get('region')
+    if (!regionParam) return
+    const raf = requestAnimationFrame(() => {
+      document
+        .getElementById(`region-${regionParam}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [loading])
 
   const filtered = useMemo(() => {
     return universities.filter((u) => {
@@ -33,7 +66,16 @@ export default function UniversitiesPage() {
       if (selectedState && u.state !== selectedState) return false
       return true
     })
-  }, [search, selectedRegions, selectedTypes, selectedState])
+  }, [search, selectedRegions, selectedTypes, selectedState, universities])
+
+  const groupedByRegion = useMemo(() => {
+    const groups: Partial<Record<Region, typeof universities>> = {}
+    for (const u of filtered) {
+      if (!groups[u.region]) groups[u.region] = []
+      groups[u.region]!.push(u)
+    }
+    return groups
+  }, [filtered])
 
   const toggleRegion = (region: Region) => {
     setSelectedRegions((prev) =>
@@ -91,6 +133,7 @@ export default function UniversitiesPage() {
             <button
               key={type.key}
               onClick={() => toggleType(type.key)}
+              aria-pressed={selectedTypes.includes(type.key)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-all ${
                 selectedTypes.includes(type.key)
                   ? 'border-[var(--bg-secondary)] bg-[var(--bg-secondary)]/10 text-[var(--bg-secondary)]'
@@ -168,10 +211,30 @@ export default function UniversitiesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filtered.map((u) => (
-                <UniversityCard key={u.id} university={u} programCount={programCounts[u.id]} />
-              ))}
+            <div className="space-y-8">
+              {REGIONS.map((region) => {
+                const unis = groupedByRegion[region.key]
+                if (!unis || unis.length === 0) return null
+                return (
+                  <section key={region.key} id={`region-${region.key}`}>
+                    <div className="mb-3 flex items-center gap-3">
+                      <span
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: region.color }}
+                      />
+                      <h2 className="text-lg font-semibold text-white">{region.key}</h2>
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {unis.length} {unis.length === 1 ? 'university' : 'universities'}
+                      </span>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {unis.map((u) => (
+                        <UniversityCard key={u.id} university={u} programCount={programCounts[u.id]} />
+                      ))}
+                    </div>
+                  </section>
+                )
+              })}
             </div>
           )}
         </>

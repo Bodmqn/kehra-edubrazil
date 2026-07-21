@@ -3,13 +3,14 @@
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { slugify } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 import { useUniversities, useUniversityDetails } from '@/lib/useSupabaseData'
 import type { University } from '@/lib/types'
 import { COST_OF_LIVING } from '@/lib/costOfLiving'
 import { availablePrograms as availableProgramsData } from '@/lib/available-programs'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
-
+import { STORAGE_KEY } from '@/lib/trackerTypes'
 import { REGIONS } from '@/lib/constants'
 
 const regionColors: Record<string, string> = Object.fromEntries(
@@ -34,7 +35,7 @@ interface UniversityDetailProps {
 }
 
 export default function UniversityDetail({ slug, fallbackUniversity }: UniversityDetailProps) {
-  const { universities: liveUniversities, loading: liveLoading } = useUniversities()
+  const { universities: liveUniversities } = useUniversities()
   const liveUniversity = liveUniversities.find((u) => slugify(u.name) === slug)
   const university = liveUniversity ?? fallbackUniversity
 
@@ -48,26 +49,42 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     [slug]
   )
   const [expandedProgram, setExpandedProgram] = useState<string | null>(null)
+  const [studyGuide, setStudyGuide] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    supabase.from('study_guide_sections').select('section_key, content').then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {}
+        for (const s of data) map[s.section_key] = s.content
+        setStudyGuide(map)
+      }
+    })
+  }, [])
+
   const [availTypeFilter, setAvailTypeFilter] = useState<'all' | 'Acadêmico' | 'Profissional'>('all')
   const [availLevelFilter, setAvailLevelFilter] = useState<string>('all')
   const [availSearch, setAvailSearch] = useState('')
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    const stored = localStorage.getItem('kehra-edubrazil-tracker')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as { id: string }[]
-        setSavedIds(new Set(parsed.map((p) => p.id)))
-      } catch { /* ignore */ }
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) return new Set()
+      return new Set((JSON.parse(stored) as { id: string }[]).map((p) => p.id))
+    } catch {
+      return new Set()
     }
-  }, [])
+  })
+
+  const handleTypeFilter: typeof setAvailTypeFilter = (type) => {
+    setAvailTypeFilter(type)
+    setAvailLevelFilter('all')
+  }
 
   const programId = (acronym: string, name: string) => slugify(`${acronym}-${name}`)
 
   const handleToggleSave = (pName: string, pLevel: string) => {
     const id = programId(university?.acronym ?? '', pName)
-    const stored = localStorage.getItem('kehra-edubrazil-tracker')
+    const stored = localStorage.getItem(STORAGE_KEY)
     let list = stored ? JSON.parse(stored) : []
 
     if (savedIds.has(id)) {
@@ -92,12 +109,8 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
       })
       setSavedIds((prev) => { const next = new Set(prev); next.add(id); return next })
     }
-    localStorage.setItem('kehra-edubrazil-tracker', JSON.stringify(list))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
   }
-
-  useEffect(() => {
-    setAvailLevelFilter('all')
-  }, [availTypeFilter])
 
   const availableLevels = useMemo(() => {
     const filtered = availTypeFilter === 'all'
@@ -279,7 +292,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     {(['all', 'Acadêmico', 'Profissional'] as const).map((type) => (
                       <button
                         key={type}
-                        onClick={() => setAvailTypeFilter(type)}
+                                                        onClick={() => handleTypeFilter(type)}
                         aria-pressed={availTypeFilter === type}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
                           availTypeFilter === type
@@ -484,17 +497,13 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
                   <h4 className="mb-2 text-sm font-semibold text-white">Visa Process</h4>
                   <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                    International students need a student visa (VITEM IV) to study in Brazil. Apply at
-                    the Brazilian consulate in your home country. Required documents include: passport,
-                    acceptance letter, proof of financial means, and health insurance.
+                    {studyGuide.visa || 'Information coming soon.'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
                   <h4 className="mb-2 text-sm font-semibold text-white">Language Requirements</h4>
                   <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                    Most programs require Portuguese proficiency (CELPE-Bras certificate). Some
-                    graduate programs offer courses in English or have English-language tracks.
-                    Contact the specific program for their language requirements.
+                    {studyGuide.language || 'Information coming soon.'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
@@ -535,10 +544,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
                   <h4 className="mb-2 text-sm font-semibold text-white">Housing</h4>
                   <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                    Options include university housing (when available), shared apartments
-                    (república), or private rentals. Websites like QuintoAndar, OLX, and Airbnb
-                    are popular for finding accommodation. Start your search 1-2 months before
-                    arrival.
+                    {studyGuide.housing || 'Information coming soon.'}
                   </p>
                 </div>
               </div>

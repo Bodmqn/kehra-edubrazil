@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useAdminSession, signOut } from '@/lib/adminClient'
+import { useAdminSession } from '@/lib/adminClient'
 import { supabase } from '@/lib/supabase'
 
 export default function AdminDashboard() {
@@ -12,65 +12,100 @@ export default function AdminDashboard() {
     programs: 0,
     subscribers: 0,
     activeNotice: false,
+    remindersSent: 0,
+    trackerPrograms: 0,
   })
+  const [statsError, setStatsError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAdmin) return
     async function fetchStats() {
-      const [{ count: uniCount }, { count: progCount }, { count: subCount }, { data: notices }] =
-        await Promise.all([
+      try {
+        const [
+          { count: uniCount },
+          { count: progCount },
+          { count: subCount },
+          { data: notices },
+          { count: reminderCount },
+          { count: trackerCount },
+        ] = await Promise.all([
           supabase.from('universities').select('*', { count: 'exact', head: true }),
           supabase.from('programs').select('*', { count: 'exact', head: true }),
           supabase.from('email_subscriptions').select('*', { count: 'exact', head: true }),
           supabase.from('general_notices').select('id').eq('active', true).limit(1),
+          supabase.from('reminder_logs').select('*', { count: 'exact', head: true }),
+          supabase.from('user_reminders').select('*', { count: 'exact', head: true }),
         ])
-      setStats({
-        universities: uniCount ?? 0,
-        programs: progCount ?? 0,
-        subscribers: subCount ?? 0,
-        activeNotice: (notices ?? []).length > 0,
-      })
+        setStats({
+          universities: uniCount ?? 0,
+          programs: progCount ?? 0,
+          subscribers: subCount ?? 0,
+          activeNotice: (notices ?? []).length > 0,
+          remindersSent: reminderCount ?? 0,
+          trackerPrograms: trackerCount ?? 0,
+        })
+        setStatsError(null)
+      } catch {
+        setStatsError('Failed to load dashboard stats.')
+      }
     }
     fetchStats()
   }, [isAdmin])
 
   if (loading) {
-    return <p className="text-sm text-[var(--text-muted)]">Loading dashboard…</p>
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-[var(--text-muted)]">Loading dashboard…</p>
+      </div>
+    )
   }
 
   if (!user || !isAdmin) {
-    return <p className="text-sm text-[var(--text-muted)]">Access denied.</p>
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-sm text-[var(--text-muted)]">Access denied.</p>
+      </div>
+    )
   }
 
-  const cards = [
+  const statCards = [
     { label: 'Universities', value: stats.universities, href: '/admin/universities', color: 'var(--bg-primary)' },
     { label: 'Programs', value: stats.programs, href: null, color: 'var(--bg-accent)' },
     { label: 'Subscribers', value: stats.subscribers, href: '/admin/subscribers', color: 'var(--bg-secondary)' },
-    { label: 'Active Notice', value: stats.activeNotice ? 'Yes' : 'No', href: '/admin/notice', color: 'var(--warning)' },
+    { label: 'Reminders Sent', value: stats.remindersSent, href: '/admin/reminder-logs', color: 'var(--warning)' },
+    { label: 'Tracker Programs', value: stats.trackerPrograms, href: '/admin/tracker', color: 'var(--success)' },
+    { label: 'Active Notice', value: stats.activeNotice ? 'Yes' : 'No', href: '/admin/notice', color: stats.activeNotice ? 'var(--warning)' : 'var(--text-muted)' },
+  ]
+
+  const quickLinks = [
+    { label: 'Edit University URLs', href: '/admin/universities', icon: '🏛️' },
+    { label: 'Manage General Notice', href: '/admin/notice', icon: '📢' },
+    { label: 'View Subscribers', href: '/admin/subscribers', icon: '📧' },
+    { label: 'Scrape Logs', href: '/admin/logs', icon: '📋' },
+    { label: 'Trigger Scrape', href: '/admin/trigger', icon: '🔄' },
+    { label: 'Reminder Logs', href: '/admin/reminder-logs', icon: '🔔' },
+    { label: 'Tracker Overview', href: '/admin/tracker', icon: '📌' },
   ]
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-            Signed in as {user.email}
-          </p>
-        </div>
-        <button
-          onClick={() => signOut()}
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-white"
-        >
-          Sign Out
-        </button>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-white">Dashboard</h1>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+          Signed in as {user.email}
+        </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {cards.map((card) => (
+      {statsError && (
+        <p className="mb-3 text-xs text-[var(--danger)]">{statsError}</p>
+      )}
+
+      {/* Stats grid */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {statCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4"
+            className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 transition-all hover:border-[var(--bg-primary)]/30"
           >
             <p className="text-2xl font-bold" style={{ color: card.color }}>
               {card.value}
@@ -81,40 +116,27 @@ export default function AdminDashboard() {
                 href={card.href}
                 className="mt-2 inline-block text-[10px] text-[var(--bg-primary)] hover:underline"
               >
-                Manage →
+                View →
               </Link>
             )}
           </div>
         ))}
       </div>
 
+      {/* Quick links */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5">
-        <h2 className="mb-3 text-sm font-semibold text-white">Quick Links</h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Link
-            href="/admin/universities"
-            className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-secondary)] hover:border-[var(--bg-primary)]/30 hover:text-white"
-          >
-            🏛️ Edit University URLs
-          </Link>
-          <Link
-            href="/admin/notice"
-            className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-secondary)] hover:border-[var(--bg-primary)]/30 hover:text-white"
-          >
-            📢 Manage General Notice
-          </Link>
-          <Link
-            href="/admin/subscribers"
-            className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-secondary)] hover:border-[var(--bg-primary)]/30 hover:text-white"
-          >
-            📧 View Subscribers
-          </Link>
-          <Link
-            href="/admin/logs"
-            className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-secondary)] hover:border-[var(--bg-primary)]/30 hover:text-white"
-          >
-            📋 Scrape Logs
-          </Link>
+        <h2 className="mb-3 text-sm font-semibold text-white">Quick Actions</h2>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {quickLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-secondary)] transition-all hover:border-[var(--bg-primary)]/30 hover:text-white"
+            >
+              <span className="mr-1.5">{link.icon}</span>
+              {link.label}
+            </Link>
+          ))}
         </div>
       </div>
     </div>

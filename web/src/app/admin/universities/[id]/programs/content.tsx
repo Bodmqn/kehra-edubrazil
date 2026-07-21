@@ -40,20 +40,25 @@ export default function ProgramsContent() {
 
   useEffect(() => {
     async function fetch() {
-      const { data: uni } = await supabase.from('universities').select('*').eq('id', id).single()
-      if (!uni) {
-        router.push('/admin/universities')
-        return
+      try {
+        const { data: uni, error: uniErr } = await supabase.from('universities').select('*').eq('id', id).single()
+        if (uniErr || !uni) {
+          router.push('/admin/universities')
+          return
+        }
+        setUniversity(uni as University)
+
+        const { data: progs, error: progsErr } = await supabase
+          .from('programs')
+          .select('*')
+          .eq('university_id', id)
+          .order('deadline', { ascending: true })
+
+        if (progsErr) throw progsErr
+        setPrograms((progs ?? []) as Program[])
+      } catch (e) {
+        setMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to load data.' })
       }
-      setUniversity(uni as University)
-
-      const { data: progs } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('university_id', id)
-        .order('deadline', { ascending: true })
-
-      setPrograms((progs ?? []) as Program[])
       setLoading(false)
     }
     fetch()

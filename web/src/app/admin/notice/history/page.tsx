@@ -8,15 +8,21 @@ import type { GeneralNotice } from '@/lib/generalNotices'
 export default function AdminNoticeHistoryPage() {
   const [notices, setNotices] = useState<GeneralNotice[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase
-        .from('general_notices')
-        .select('*')
-        .order('created_at', { ascending: false })
-      setNotices((data ?? []) as GeneralNotice[])
+      try {
+        const { data, error } = await supabase
+          .from('general_notices')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        setNotices((data ?? []) as GeneralNotice[])
+      } catch (e) {
+        setFetchError(e instanceof Error ? e.message : 'Failed to load notices.')
+      }
       setLoading(false)
     }
     fetch()
@@ -28,6 +34,10 @@ export default function AdminNoticeHistoryPage() {
 
   if (loading) {
     return <p className="text-sm text-[var(--text-muted)]">Loading history…</p>
+  }
+
+  if (fetchError) {
+    return <p className="text-sm text-[var(--danger)]">{fetchError}</p>
   }
 
   return (
