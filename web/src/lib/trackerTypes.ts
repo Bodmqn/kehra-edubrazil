@@ -1,4 +1,4 @@
-export type TrackerStage = 'saved' | 'applying' | 'applied' | 'interview' | 'accepted' | 'rejected' | 'deferred'
+export type TrackerStage = 'saved' | 'applying' | 'applied' | 'interview' | 'accepted' | 'rejected'
 
 export type Priority = 'high' | 'medium' | 'low'
 
@@ -21,6 +21,7 @@ export interface TrackerProgram {
   notes: string
   checklist: ChecklistItem[]
   reminderDays: number[]
+  source?: 'manual' | 'scholarship'
   createdAt: string
   updatedAt: string
 }
@@ -32,7 +33,6 @@ export const STAGES: { key: TrackerStage; label: string; color: string }[] = [
   { key: 'interview', label: 'Interview', color: 'var(--bg-accent)' },
   { key: 'accepted', label: 'Accepted', color: 'var(--success)' },
   { key: 'rejected', label: 'Rejected', color: 'var(--danger)' },
-  { key: 'deferred', label: 'Deferred', color: 'var(--text-secondary)' },
 ]
 
 export const PRIORITIES: { key: Priority; label: string; color: string }[] = [

@@ -54,6 +54,14 @@ export interface ProgramWithUniversity extends Program {
   university_type: string
 }
 
+export interface AvailableProgram {
+  name: string
+  levelLabel: string
+  typeLabel: string
+  capesScore: string
+  status: string
+}
+
 export interface ScrapeLog {
   id: string
   university_id: string

@@ -1,16 +1,15 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { slugify } from '@/lib/utils'
-import { getMockPrograms } from '@/lib/mock-programs'
-import { useUniversities, usePrograms, useUniversityDetails } from '@/lib/useSupabaseData'
+import { useUniversities, useUniversityDetails } from '@/lib/useSupabaseData'
 import type { University } from '@/lib/types'
 import { COST_OF_LIVING } from '@/lib/costOfLiving'
+import { availablePrograms as availableProgramsData } from '@/lib/available-programs'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
-import SearchInput from '@/components/SearchInput'
-import ProgramCard from '@/components/ProgramCard'
+
 import { REGIONS } from '@/lib/constants'
 
 const regionColors: Record<string, string> = Object.fromEntries(
@@ -18,7 +17,6 @@ const regionColors: Record<string, string> = Object.fromEntries(
 )
 
 const TABS = [
-  { key: 'programs', label: 'Programs' },
   { key: 'available', label: 'Available' },
   { key: 'about', label: 'About' },
   { key: 'study-guide', label: 'Study Guide' },
@@ -39,56 +37,94 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
   const { universities: liveUniversities, loading: liveLoading } = useUniversities()
   const liveUniversity = liveUniversities.find((u) => slugify(u.name) === slug)
   const university = liveUniversity ?? fallbackUniversity
-  const { programs: livePrograms, loading: programsLoading } = usePrograms(university?.id ?? null)
-  const { details } = useUniversityDetails(university?.id ?? null)
-  const [activeTab, setActiveTab] = useState('programs')
-  const [programSearch, setProgramSearch] = useState('')
-  const [levelFilter, setLevelFilter] = useState<'all' | 'Mestrado' | 'Doutorado'>('all')
-  const [showOpenOnly, setShowOpenOnly] = useState(true)
-  const [sortBy, setSortBy] = useState<'name' | 'deadline' | 'status'>('name')
 
-  const showMockPrograms = !programsLoading && livePrograms.length === 0
-  const programs = livePrograms.length > 0
-    ? livePrograms
-    : showMockPrograms && university
-      ? getMockPrograms(university.acronym, university.id)
-      : []
+  const uniId = university?.id ?? null
+  const isRealId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uniId ?? '')
+  const { details } = useUniversityDetails(isRealId ? uniId : null)
+  const [activeTab, setActiveTab] = useState('available')
 
-  const filteredPrograms = useMemo(() => {
-    const filtered = programs.filter((p) => {
-      if (showOpenOnly && p.status !== 'Aberto') return false
-      if (levelFilter !== 'all' && p.level !== levelFilter) return false
-      if (programSearch) {
-        const q = programSearch.toLowerCase()
-        if (!p.name.toLowerCase().includes(q) && !(p.field || '').toLowerCase().includes(q))
-          return false
-      }
-      return true
-    })
+  const uniAvailablePrograms = useMemo(
+    () => (availableProgramsData[slug] ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [slug]
+  )
+  const [expandedProgram, setExpandedProgram] = useState<string | null>(null)
+  const [availTypeFilter, setAvailTypeFilter] = useState<'all' | 'Acadêmico' | 'Profissional'>('all')
+  const [availLevelFilter, setAvailLevelFilter] = useState<string>('all')
+  const [availSearch, setAvailSearch] = useState('')
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
 
-    filtered.sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name)
-      if (sortBy === 'deadline') {
-        if (!a.deadline && !b.deadline) return 0
-        if (!a.deadline) return 1
-        if (!b.deadline) return -1
-        return a.deadline.localeCompare(b.deadline)
-      }
-      const order = { Aberto: 0, 'Em Breve': 1, Fechado: 2 }
-      return (order[a.status as keyof typeof order] ?? 3) - (order[b.status as keyof typeof order] ?? 3)
-    })
+  useEffect(() => {
+    const stored = localStorage.getItem('kehra-edubrazil-tracker')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as { id: string }[]
+        setSavedIds(new Set(parsed.map((p) => p.id)))
+      } catch { /* ignore */ }
+    }
+  }, [])
 
-    return filtered
-  }, [programs, programSearch, levelFilter, showOpenOnly, sortBy])
+  const programId = (acronym: string, name: string) => slugify(`${acronym}-${name}`)
 
-  const availablePrograms = useMemo(() => {
-    const prevYear = new Date().getFullYear() - 1
-    const byPrevYear = programs.filter(p => {
-      if (!p.deadline) return false
-      return new Date(p.deadline).getFullYear() === prevYear
-    })
-    return byPrevYear.length > 0 ? byPrevYear : programs
-  }, [programs])
+  const handleToggleSave = (pName: string, pLevel: string) => {
+    const id = programId(university?.acronym ?? '', pName)
+    const stored = localStorage.getItem('kehra-edubrazil-tracker')
+    let list = stored ? JSON.parse(stored) : []
+
+    if (savedIds.has(id)) {
+      list = list.filter((p: { id: string }) => p.id !== id)
+      setSavedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
+    } else {
+      list.push({
+        id,
+        name: pName,
+        university: `${university?.name ?? ''} (${university?.acronym ?? ''})`,
+        deadline: null,
+        level: pLevel,
+        programUrl: null,
+        stage: 'saved',
+        priority: 'medium',
+        notes: '',
+        checklist: [],
+        reminderDays: [],
+        source: 'manual',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      setSavedIds((prev) => { const next = new Set(prev); next.add(id); return next })
+    }
+    localStorage.setItem('kehra-edubrazil-tracker', JSON.stringify(list))
+  }
+
+  useEffect(() => {
+    setAvailLevelFilter('all')
+  }, [availTypeFilter])
+
+  const availableLevels = useMemo(() => {
+    const filtered = availTypeFilter === 'all'
+      ? uniAvailablePrograms
+      : uniAvailablePrograms.filter((p) => p.typeLabel === availTypeFilter)
+    return [...new Set(filtered.map((p) => p.levelLabel))].sort()
+  }, [uniAvailablePrograms, availTypeFilter])
+
+  const filteredAvailable = useMemo(() => {
+    let result = uniAvailablePrograms
+    if (availTypeFilter !== 'all') result = result.filter((p) => p.typeLabel === availTypeFilter)
+    if (availLevelFilter !== 'all') result = result.filter((p) => p.levelLabel === availLevelFilter)
+    if (availSearch) {
+      const q = availSearch.toLowerCase()
+      result = result.filter((p) => p.name.toLowerCase().includes(q))
+    }
+    return result
+  }, [uniAvailablePrograms, availTypeFilter, availLevelFilter, availSearch])
+
+  const academicCount = useMemo(
+    () => uniAvailablePrograms.filter((p) => p.typeLabel === 'Acadêmico').length,
+    [uniAvailablePrograms]
+  )
+  const profissionalCount = useMemo(
+    () => uniAvailablePrograms.filter((p) => p.typeLabel === 'Profissional').length,
+    [uniAvailablePrograms]
+  )
 
   if (!university) {
     return (
@@ -169,20 +205,16 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
           {/* Stats */}
           <div className="mt-6 grid grid-cols-3 gap-3 sm:gap-6">
             <div className="rounded-lg bg-[var(--bg-card)] p-3 text-center">
-              <div className="text-lg font-bold text-white">{programs.length}</div>
+              <div className="text-lg font-bold text-white">{uniAvailablePrograms.length}</div>
               <div className="text-xs text-[var(--text-muted)]">Programs</div>
             </div>
             <div className="rounded-lg bg-[var(--bg-card)] p-3 text-center">
-              <div className="text-lg font-bold text-[var(--success)]">
-                {programs.filter((p) => p.status === 'Aberto').length}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">Open</div>
+              <div className="text-lg font-bold text-emerald-400">{academicCount}</div>
+              <div className="text-xs text-[var(--text-muted)]">Acadêmico</div>
             </div>
             <div className="rounded-lg bg-[var(--bg-card)] p-3 text-center">
-              <div className="text-lg font-bold text-[var(--warning)]">
-                {programs.filter((p) => p.status === 'Em Breve').length}
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">Coming Soon</div>
+              <div className="text-lg font-bold text-sky-400">{profissionalCount}</div>
+              <div className="text-xs text-[var(--text-muted)]">Profissional</div>
             </div>
           </div>
         </div>
@@ -190,10 +222,18 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
       {university && (
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-6">
-          <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning)]/5 p-4">
-            <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-              <strong className="text-[var(--warning)]">Attention:</strong> Some information displayed for this university may not be 100% accurate or up to date. Our data is automatically collected by a scraping system from the university&apos;s official website and SIGAA/Edital pages, and certain details may be incomplete or subject to change.
-            </p>
+          <div className="rounded-xl border-l-4 border-l-[var(--bg-primary)] border border-[var(--border)] bg-[var(--bg-card)] p-4">
+            <div className="flex gap-3">
+              <span className="text-lg shrink-0 mt-0.5">📋</span>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Source: CAPES / Brazilian Ministry of Education (2021–2024)
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                  The programs listed in the Available tab come from the official CAPES graduate course registry. While this is the most comprehensive source available, program details, deadlines, and selection processes may change. Always verify the latest information on the university&apos;s SIGAA portal or official website before applying.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -203,103 +243,171 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         <TabBar tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
         <div className="py-6">
-          {/* Programs Tab */}
-          {activeTab === 'programs' && (
-            <div>
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex-1">
-                  <SearchInput
-                    value={programSearch}
-                    onChange={setProgramSearch}
-                    placeholder="Search programs..."
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  {(['all', 'Mestrado', 'Doutorado'] as const).map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setLevelFilter(level)}
-                      aria-pressed={levelFilter === level}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                        levelFilter === level
-                          ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
-                          : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      {level === 'all' ? 'All' : level}
-                    </button>
-                  ))}
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                    className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs text-white outline-none"
-                  >
-                    <option value="name">Name A-Z</option>
-                    <option value="deadline">Deadline</option>
-                    <option value="status">Status</option>
-                  </select>
-                  <button
-                    onClick={() => setShowOpenOnly(!showOpenOnly)}
-                    aria-pressed={showOpenOnly}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
-                      showOpenOnly
-                        ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                        : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
-                    }`}
-                  >
-                    Open Only
-                  </button>
-                </div>
-              </div>
-
-              {filteredPrograms.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <p className="text-sm text-[var(--text-muted)]">No programs match your filters</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredPrograms.map((program) => (
-                    <ProgramCard key={program.id} program={program} universityName={`${university.name} (${university.acronym})`} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Available Tab */}
           {activeTab === 'available' && (
             <div>
-              <div className="mb-6">
+              <div className="mb-4">
                 <h3 className="text-lg font-semibold text-white">Available Programs</h3>
                 <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                  These programs were offered in recent years and are expected to be available again. Use this as a reference to explore the university&apos;s graduate offerings.
+                  Graduate programs offered by this university. Click a program to see details.
                 </p>
               </div>
-              {['Mestrado', 'Doutorado'].map(level => {
-                const levelPrograms = availablePrograms.filter(p => p.level === level)
-                if (levelPrograms.length === 0) return null
-                return (
-                  <div key={level} className="mb-6">
-                    <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">{level}</h4>
-                    <div className="space-y-2">
-                      {levelPrograms.map(p => (
-                        <div
-                          key={p.id}
-                          className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3"
-                        >
-                          <div className="text-sm font-medium text-white">{p.name}</div>
-                          {p.field && (
-                            <div className="mt-0.5 text-xs text-[var(--text-muted)]">{p.field}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {availablePrograms.length === 0 && (
+              {uniAvailablePrograms.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16">
                   <p className="text-sm text-[var(--text-muted)]">No program data available for this university yet.</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="relative mb-4">
+                    <input
+                      type="text"
+                      value={availSearch}
+                      onChange={(e) => setAvailSearch(e.target.value)}
+                      placeholder="Search programs..."
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 pr-8 text-sm text-white outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--bg-primary)]/50"
+                    />
+                    {availSearch && (
+                      <button
+                        onClick={() => setAvailSearch('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white transition-colors text-lg leading-none"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    {(['all', 'Acadêmico', 'Profissional'] as const).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setAvailTypeFilter(type)}
+                        aria-pressed={availTypeFilter === type}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                          availTypeFilter === type
+                            ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                            : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                        }`}
+                      >
+                        {type === 'all' ? 'All Types' : type}
+                      </button>
+                    ))}
+                    <span className="mx-1 h-5 w-px bg-[var(--border)]" />
+                    {availableLevels.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setAvailLevelFilter('all')}
+                          aria-pressed={availLevelFilter === 'all'}
+                          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                            availLevelFilter === 'all'
+                              ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                              : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                          }`}
+                        >
+                          All Levels
+                        </button>
+                        {availableLevels.map((level) => (
+                          <button
+                            key={level}
+                            onClick={() => setAvailLevelFilter(level)}
+                            aria-pressed={availLevelFilter === level}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+                              availLevelFilter === level
+                                ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/10 text-[var(--bg-primary)]'
+                                : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+                            }`}
+                          >
+                            {level}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                  {filteredAvailable.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <p className="text-sm text-[var(--text-muted)]">No programs match your filters</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {filteredAvailable.map((p, i) => {
+                        const isExpanded = expandedProgram === `${p.name}-${i}`
+                        return (
+                          <div key={`${p.name}-${i}`} className="rounded-lg border border-[var(--border)] overflow-hidden">
+                            <button
+                              onClick={() => setExpandedProgram(isExpanded ? null : `${p.name}-${i}`)}
+                              className="flex w-full items-center justify-between bg-[var(--bg-card)] px-4 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-[var(--bg-card-hover)]"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="truncate">{p.name}</span>
+                                {p.capesScore && (
+                                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                                    p.capesScore === '7' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    p.capesScore === '5' || p.capesScore === '6' ? 'bg-emerald-500/20 text-emerald-400' :
+                                    p.capesScore === '4' ? 'bg-sky-500/20 text-sky-400' :
+                                    p.capesScore === '3' ? 'bg-gray-500/20 text-gray-400' :
+                                    'bg-violet-500/20 text-violet-400'
+                                  }`}>
+                                    CAPES {p.capesScore}
+                                  </span>
+                                )}
+                              </div>
+                              <svg
+                                className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {isExpanded && (
+                              <div className="border-t border-[var(--border)] bg-[var(--bg-card)]/50 px-4 py-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-2 flex-1">
+                                    <div className="grid grid-cols-3 gap-3 text-sm">
+                                      <div>
+                                        <span className="text-xs text-[var(--text-muted)]">Level</span>
+                                        <p className="font-medium text-white">{p.levelLabel}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-xs text-[var(--text-muted)]">Type</span>
+                                        <p className="font-medium text-white">{p.typeLabel}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-xs text-[var(--text-muted)]">CAPES Score</span>
+                                        <p className="font-medium text-white">{p.capesScore || '—'}</p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${p.status === 'active' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                                      <span className="text-[var(--text-secondary)]">
+                                        {p.status === 'active' ? 'Active program' : 'Deactivated program'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0">
+                                    {savedIds.has(programId(university?.acronym ?? '', p.name)) ? (
+                                      <button
+                                        onClick={() => handleToggleSave(p.name, p.levelLabel)}
+                                        className="rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-all hover:bg-red-500/20"
+                                      >
+                                        Remove
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleToggleSave(p.name, p.levelLabel)}
+                                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-all hover:border-[var(--bg-primary)]/30 hover:text-white"
+                                      >
+                                        Save to Tracker
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -334,7 +442,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                     { label: 'Region', value: university.region },
                     { label: 'State', value: university.state },
                     { label: 'Acronym', value: university.acronym },
-                    { label: 'Total Programs', value: String(programs.length) },
+                    { label: 'Total Programs', value: String(uniAvailablePrograms.length) },
                     university.sigaa_url
                       ? { label: 'Graduate Portal', value: '', link: university.sigaa_url }
                       : null,

@@ -10,28 +10,8 @@ interface ProgramCardProps {
   universityName?: string
 }
 
-export default function ProgramCard({ program, universityName }: ProgramCardProps) {
+export default function ProgramCard({ program }: ProgramCardProps) {
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
-  const [saved, setSaved] = useState(false)
-  const [justSaved, setJustSaved] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem('kehra-edubrazil-tracker')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        queueMicrotask(() => {
-          setSaved(parsed.some((p: { id: string }) => p.id === program.id))
-        })
-      } catch { /* ignore */ }
-    }
-  }, [program.id])
-
-  useEffect(() => {
-    if (!justSaved) return
-    const t = setTimeout(() => setJustSaved(false), 2000)
-    return () => clearTimeout(t)
-  }, [justSaved])
 
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -41,34 +21,6 @@ export default function ProgramCard({ program, universityName }: ProgramCardProp
 
   const days = mounted ? daysUntil(program.deadline) : null
   const urgency = getDeadlineUrgency(days)
-
-  const handleSave = () => {
-    const stored = localStorage.getItem('kehra-edubrazil-tracker')
-    let list = stored ? JSON.parse(stored) : []
-    if (saved) {
-      list = list.filter((p: { id: string }) => p.id !== program.id)
-      setSaved(false)
-    } else {
-      list.push({
-        id: program.id,
-        name: program.name,
-        university: universityName || '',
-        deadline: program.deadline,
-        level: program.level,
-        programUrl: program.edital_url,
-        stage: 'saved',
-        priority: 'medium',
-        notes: '',
-        checklist: [],
-        reminderDays: [7, 3, 1],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-      setSaved(true)
-      setJustSaved(true)
-    }
-    localStorage.setItem('kehra-edubrazil-tracker', JSON.stringify(list))
-  }
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/20">
@@ -113,18 +65,6 @@ export default function ProgramCard({ program, universityName }: ProgramCardProp
               Edital
             </a>
           )}
-          <button
-            onClick={handleSave}
-            className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${
-              justSaved
-                ? 'border-[var(--success)] bg-[var(--success)]/10 text-[var(--success)]'
-                : saved
-                  ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/10 text-[var(--bg-accent)]'
-                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--bg-accent)]/30 hover:text-white'
-            }`}
-          >
-            {justSaved ? 'Saved!' : saved ? 'Saved' : 'Save'}
-          </button>
         </div>
       </div>
     </div>

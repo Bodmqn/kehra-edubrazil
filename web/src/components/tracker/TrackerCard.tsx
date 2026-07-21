@@ -3,6 +3,7 @@
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import { STAGES, PRIORITIES } from '@/lib/trackerTypes'
 import { daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
+import { getActiveReminders } from '@/lib/reminderUtils'
 
 interface TrackerCardProps {
   program: TrackerProgram
@@ -18,10 +19,17 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
   const priorityDef = PRIORITIES.find((p) => p.key === program.priority)
   const doneCount = program.checklist.filter((c) => c.done).length
   const totalCount = program.checklist.length
+  const activeReminders = getActiveReminders([program])
+  const hasReminder = program.reminderDays.length > 0
+  const isDue = activeReminders.length > 0
 
   return (
     <div
-      className="group rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 transition-all hover:border-[var(--bg-primary)]/30 hover:bg-[var(--bg-card-hover)]"
+      className={`group rounded-xl border p-4 transition-all ${
+        isDue
+          ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/5'
+          : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--bg-primary)]/30 hover:bg-[var(--bg-card-hover)]'
+      }`}
     >
       {/* Header */}
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -35,7 +43,20 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
             {program.level ? ` · ${program.level}` : ''}
           </p>
         </button>
-        <div className="flex shrink-0 gap-1">
+        <div className="flex shrink-0 items-center gap-1">
+          {hasReminder && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[9px] ${isDue ? 'bg-[var(--bg-accent)]/20 text-[var(--bg-accent)]' : 'text-[var(--text-muted)]'}`}
+              title={program.reminderDays.map((d) => d === 0 ? 'Same day' : `${d}d before`).join(', ')}
+            >
+              {isDue ? '🔔' : '🔕'}
+            </span>
+          )}
+          {program.source === 'scholarship' && (
+            <span className="rounded bg-[var(--bg-accent)]/10 px-1.5 py-0.5 text-[9px] font-medium text-[var(--bg-accent)]">
+              Via Scholarship
+            </span>
+          )}
           {priorityDef && (
             <span
               className="rounded px-1.5 py-0.5 text-[9px] font-medium uppercase"
@@ -149,15 +170,6 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
             ❌ Rejected
           </span>
         )}
-        {program.stage === 'deferred' && (
-          <button
-            onClick={() => onStageChange(program.id, 'saved')}
-            className="rounded bg-white/5 px-2 py-1 text-[10px] text-[var(--text-secondary)] hover:text-white"
-          >
-            Reactivate
-          </button>
-        )}
-
         <button
           onClick={() => onEdit(program)}
           className="ml-auto rounded bg-white/5 px-2 py-1 text-[10px] text-[var(--text-muted)] hover:text-white"

@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useMemo, useCallback } from 'react'
 import type { TrackerProgram, TrackerStage, Priority, ChecklistItem } from '@/lib/trackerTypes'
 import { STAGES, PRIORITIES, DEFAULT_CHECKLIST_ITEMS } from '@/lib/trackerTypes'
-import { daysUntil, getDeadlineUrgency } from '@/lib/utils'
+import { REMINDER_PRESETS } from '@/lib/reminderUtils'
+import { daysUntil, getDeadlineUrgency, slugify } from '@/lib/utils'
+import { universities } from '@/lib/data'
+import { availablePrograms as allProgramsBySlug } from '@/lib/available-programs'
+import Combobox from '@/components/ui/Combobox'
 
 interface TrackerModalProps {
   open: boolean
@@ -28,8 +32,62 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
   const [stage, setStage] = useState<TrackerStage>(() => program?.stage ?? 'saved')
   const [priority, setPriority] = useState<Priority>(() => program?.priority ?? 'medium')
   const [notes, setNotes] = useState(() => program?.notes ?? '')
+  const [reminderDays, setReminderDays] = useState<number[]>(() =>
+    program?.reminderDays && program.reminderDays.length > 0
+      ? [...new Set(program.reminderDays)].sort((a, b) => a - b)
+      : []
+  )
   const [checklist, setChecklist] = useState<ChecklistItem[]>(() =>
     program?.checklist && program.checklist.length > 0 ? program.checklist : []
+  )
+  const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null)
+  const [editingChecklistText, setEditingChecklistText] = useState('')
+
+  const uniOptions = useMemo(
+    () =>
+      universities.map((u) => ({
+        value: u.name,
+        label: `${u.name} (${u.acronym})`,
+      })),
+    []
+  )
+
+  const programOptions = useMemo(() => {
+    if (!university) return []
+    const slug = slugify(university)
+    const programs = allProgramsBySlug[slug]
+    if (!programs) return []
+    return programs.map((p) => ({ value: p.name, label: p.name }))
+  }, [university])
+
+  const levelLabelToFormValue = useCallback((label: string): string => {
+    const l = label.toLowerCase()
+    if (l.includes('doutorado') && l.includes('mestrado')) return 'Ambos'
+    if (l.includes('doutorado')) return 'Doutorado'
+    if (l.includes('mestrado')) return 'Mestrado'
+    return 'Mestrado'
+  }, [])
+
+  const handleUniversitySelect = useCallback((selected: string) => {
+    const slug = slugify(selected)
+    const programs = allProgramsBySlug[slug]
+    if (programs && programs.length === 1) {
+      setLevel(levelLabelToFormValue(programs[0].levelLabel))
+    }
+  }, [levelLabelToFormValue])
+
+  const handleProgramSelect = useCallback(
+    (selectedName: string) => {
+      if (!university) return
+      const slug = slugify(university)
+      const programs = allProgramsBySlug[slug]
+      if (!programs) return
+      const program = programs.find((p) => p.name === selectedName)
+      if (program) {
+        setLevel(levelLabelToFormValue(program.levelLabel))
+      }
+    },
+    [university, levelLabelToFormValue]
   )
 
   useEffect(() => {
@@ -40,6 +98,40 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [open, onClose])
+
+  const toggleReminderDay = (day: number) => {
+    setReminderDays((prev) => {
+      if (prev.includes(day)) return prev.filter((d) => d !== day)
+      return [...prev, day].sort((a, b) => a - b)
+    })
+  }
+
+  const addCustomReminderDay = (day: number) => {
+    if (day < 0 || day > 365) return
+    setReminderDays((prev) => {
+      if (prev.includes(day)) return prev
+      return [...prev, day].sort((a, b) => a - b)
+    })
+  }
+
+  const startEditChecklistItem = (id: string, text: string) => {
+    setEditingChecklistId(id)
+    setEditingChecklistText(text)
+  }
+
+  const saveEditChecklistItem = () => {
+    if (!editingChecklistId) return
+    const trimmed = editingChecklistText.trim()
+    if (!trimmed) {
+      removeChecklistItem(editingChecklistId)
+    } else {
+      setChecklist((prev) =>
+        prev.map((c) => (c.id === editingChecklistId ? { ...c, text: trimmed } : c))
+      )
+    }
+    setEditingChecklistId(null)
+    setEditingChecklistText('')
+  }
 
   const addChecklistItem = (text: string) => {
     if (!text.trim()) return
@@ -72,13 +164,19 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
       priority,
       notes: notes.trim(),
       checklist,
-      reminderDays: [7, 3, 1],
+      reminderDays,
+      source: program?.source ?? 'manual',
       createdAt: program?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     })
   }
 
   if (!open) return null
+
+  const isExistingEntry = !!(program && program.id)
+  const modalTitle = isExistingEntry
+    ? program.source === 'scholarship' ? 'Edit Scholarship' : 'Edit Program'
+    : program?.source === 'scholarship' ? 'Add Scholarship' : 'Add Program'
 
   const days = daysUntil(deadline || null)
   const urgency = getDeadlineUrgency(days)
@@ -89,9 +187,7 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
       <div className="fixed inset-0 bg-black/60" onClick={onClose} />
       <div className="relative w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">
-            {isNew ? 'Add Program' : 'Edit Program'}
-          </h2>
+          <h2 className="text-lg font-bold text-white">{modalTitle}</h2>
           <button
             onClick={onClose}
             className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-white"
@@ -101,35 +197,39 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name */}
-          <div>
-            <label htmlFor={`${formId}-name`} className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
-              Program Name *
-            </label>
-            <input
-              id={`${formId}-name`}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="e.g. Mestrado em Ciência da Computação"
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)]"
-            />
-          </div>
-
           {/* University */}
           <div>
             <label htmlFor={`${formId}-uni`} className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
               University *
             </label>
-            <input
+            <Combobox
               id={`${formId}-uni`}
-              type="text"
+              options={uniOptions}
               value={university}
-              onChange={(e) => setUniversity(e.target.value)}
+              onChange={setUniversity}
+              onSelect={handleUniversitySelect}
               required
-              placeholder="e.g. Universidade de São Paulo (USP)"
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)]"
+              placeholder="Search or type a university name..."
+            />
+          </div>
+
+          {/* Name */}
+          <div>
+            <label htmlFor={`${formId}-name`} className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
+              Program Name *
+            </label>
+            <Combobox
+              id={`${formId}-name`}
+              options={programOptions}
+              value={name}
+              onChange={setName}
+              onSelect={handleProgramSelect}
+              required
+              placeholder={
+                university
+                  ? `Search programs at ${university}...`
+                  : 'Select a university first, then search programs'
+              }
             />
           </div>
 
@@ -240,15 +340,23 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
               <label className="text-[11px] font-medium text-[var(--text-secondary)]">
                 Checklist ({doneCount}/{checklist.length})
               </label>
-              {isNew && checklist.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => setChecklist(DEFAULT_CHECKLIST_ITEMS.map((c) => ({ id: generateId(), text: c.text, done: false })))}
-                  className="text-[10px] text-[var(--bg-primary)] hover:underline"
-                >
-                  Use template
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const existingTexts = new Set(checklist.map((c) => c.text.toLowerCase()))
+                  const toAdd = DEFAULT_CHECKLIST_ITEMS.filter(
+                    (t) => !existingTexts.has(t.text.toLowerCase())
+                  )
+                  if (toAdd.length === 0) return
+                  setChecklist((prev) => [
+                    ...prev,
+                    ...toAdd.map((c) => ({ id: generateId(), text: c.text, done: false })),
+                  ])
+                }}
+                className="text-[10px] text-[var(--bg-primary)] hover:underline"
+              >
+                Use template
+              </button>
             </div>
             <div className="space-y-1">
               {checklist.map((item) => (
@@ -259,11 +367,30 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
                     onChange={() => toggleChecklistItem(item.id)}
                     className="size-3.5 accent-[var(--bg-primary)]"
                   />
-                  <span
-                    className={`flex-1 text-xs ${item.done ? 'text-[var(--text-muted)] line-through' : 'text-white'}`}
-                  >
-                    {item.text}
-                  </span>
+                  {editingChecklistId === item.id ? (
+                    <input
+                      type="text"
+                      value={editingChecklistText}
+                      onChange={(e) => setEditingChecklistText(e.target.value)}
+                      onBlur={saveEditChecklistItem}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEditChecklistItem()
+                        if (e.key === 'Escape') setEditingChecklistId(null)
+                      }}
+                      autoFocus
+                      className="flex-1 rounded border border-[var(--bg-primary)] bg-[var(--bg-dark)] px-1.5 py-0.5 text-xs text-white outline-none"
+                    />
+                  ) : (
+                    <span
+                      className={`flex-1 cursor-pointer rounded px-1.5 py-0.5 text-xs hover:bg-white/5 ${
+                        item.done ? 'text-[var(--text-muted)] line-through' : 'text-white'
+                      }`}
+                      onClick={() => startEditChecklistItem(item.id, item.text)}
+                      title="Click to edit"
+                    >
+                      {item.text}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => removeChecklistItem(item.id)}
@@ -301,6 +428,83 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
             </div>
           </div>
 
+          {/* Reminders */}
+          <div>
+            <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
+              Reminders
+            </label>
+            <p className="mb-2 text-[10px] text-[var(--text-muted)]">
+              Get notified before the deadline{program?.deadline ? '' : ' (set a deadline above)'}
+            </p>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {REMINDER_PRESETS.map((preset) => {
+                const active = reminderDays.includes(preset.days)
+                return (
+                  <button
+                    key={preset.days}
+                    type="button"
+                    onClick={() => toggleReminderDay(preset.days)}
+                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                      active
+                        ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/20 text-[var(--bg-accent)]'
+                        : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex gap-1">
+              <input
+                type="number"
+                min={0}
+                max={365}
+                placeholder="Custom days"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const val = parseInt((e.target as HTMLInputElement).value)
+                    if (!isNaN(val)) addCustomReminderDay(val)
+                    ;(e.target as HTMLInputElement).value = ''
+                  }
+                }}
+                className="w-24 rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2 py-1 text-xs text-white placeholder-[var(--text-muted)] outline-none"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  const input = (e.target as HTMLButtonElement).previousElementSibling as HTMLInputElement
+                  const val = parseInt(input.value)
+                  if (!isNaN(val)) addCustomReminderDay(val)
+                  input.value = ''
+                }}
+                className="rounded bg-white/10 px-2 py-1 text-[10px] text-white hover:bg-white/20"
+              >
+                Add
+              </button>
+            </div>
+            {reminderDays.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {reminderDays.map((d) => (
+                  <span
+                    key={d}
+                    className="inline-flex items-center gap-1 rounded bg-[var(--bg-accent)]/10 px-2 py-0.5 text-[10px] text-[var(--bg-accent)]"
+                  >
+                    {d === 0 ? 'Same day' : `${d} day${d === 1 ? '' : 's'} before`}
+                    <button
+                      type="button"
+                      onClick={() => setReminderDays((prev) => prev.filter((x) => x !== d))}
+                      className="text-[var(--bg-accent)] hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Submit */}
           <div className="flex gap-2 pt-2">
             <button
@@ -314,7 +518,7 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
               type="submit"
               className="flex-1 rounded-lg bg-[var(--bg-accent)] px-4 py-2.5 text-sm font-medium text-black hover:opacity-90"
             >
-              {isNew ? 'Add Program' : 'Save Changes'}
+              {isExistingEntry ? 'Save Changes' : modalTitle}
             </button>
           </div>
         </form>

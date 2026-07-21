@@ -1,10 +1,17 @@
 'use client'
 
-import { useState, useMemo, useSyncExternalStore } from 'react'
+import { useState, useMemo, useEffect, useSyncExternalStore, useCallback } from 'react'
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import { STAGES, STORAGE_KEY } from '@/lib/trackerTypes'
 import { usePageMeta } from '@/lib/usePageMeta'
 import { supabase } from '@/lib/supabase'
+import {
+  getActiveReminders,
+  getDismissedReminders,
+  dismissReminder,
+  dismissAllReminders,
+} from '@/lib/reminderUtils'
+import { daysUntil } from '@/lib/utils'
 import StatsBar from '@/components/tracker/StatsBar'
 import DeadlineTimeline from '@/components/tracker/DeadlineTimeline'
 import TrackerCard from '@/components/tracker/TrackerCard'
@@ -31,7 +38,8 @@ export default function TrackerPage() {
             priority: p.priority ?? 'medium',
             notes: p.notes ?? '',
             checklist: Array.isArray(p.checklist) ? p.checklist : [],
-            reminderDays: Array.isArray(p.reminderDays) ? p.reminderDays : [7, 3, 1],
+            reminderDays: Array.isArray(p.reminderDays) ? p.reminderDays : [],
+            source: p.source ?? 'manual',
             createdAt: p.createdAt ?? new Date().toISOString(),
             updatedAt: p.updatedAt ?? new Date().toISOString(),
           }))
@@ -57,11 +65,44 @@ export default function TrackerPage() {
     if (typeof window !== 'undefined') return localStorage.getItem('kehra-sub-email')
     return null
   })
+  const [dismissedSet, setDismissedSet] = useState<Set<string>>(() => getDismissedReminders())
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) return Notification.permission
+    return 'denied'
+  })
 
   const saveToStorage = (updated: TrackerProgram[]) => {
     setPrograms(updated)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
   }
+
+  const syncReminderToServer = useCallback(
+    async (program: TrackerProgram) => {
+      if (!subscriptionToken) return
+      if (program.reminderDays.length === 0) {
+        fetch('/.netlify/functions/sync-reminders', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: subscriptionToken, programId: program.id }),
+        }).catch(() => {})
+        return
+      }
+      fetch('/.netlify/functions/sync-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: subscriptionToken,
+          programId: program.id,
+          programName: program.name,
+          university: program.university,
+          deadline: program.deadline,
+          reminderDays: program.reminderDays,
+          source: program.source ?? 'manual',
+        }),
+      }).catch(() => {})
+    },
+    [subscriptionToken]
+  )
 
   const handleSave = (program: TrackerProgram) => {
     const idx = programs.findIndex((p) => p.id === program.id)
@@ -73,6 +114,7 @@ export default function TrackerPage() {
       updated = [program, ...programs]
     }
     saveToStorage(updated)
+    syncReminderToServer(program)
     setModalOpen(false)
     setEditing(null)
   }
@@ -80,6 +122,13 @@ export default function TrackerPage() {
   const handleDelete = (id: string) => {
     if (!window.confirm('Remove this program from your tracker?')) return
     saveToStorage(programs.filter((p) => p.id !== id))
+    if (subscriptionToken) {
+      fetch('/.netlify/functions/sync-reminders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: subscriptionToken, programId: id }),
+      }).catch(() => {})
+    }
   }
 
   const handleStageChange = (id: string, stage: TrackerProgram['stage']) => {
@@ -95,6 +144,26 @@ export default function TrackerPage() {
 
   const openAdd = () => {
     setEditing(null)
+    setModalOpen(true)
+  }
+
+  const openAddScholarship = () => {
+    setEditing({
+      id: '',
+      name: '',
+      university: '',
+      deadline: null,
+      level: 'Mestrado',
+      programUrl: null,
+      stage: 'applied',
+      priority: 'medium',
+      notes: '',
+      checklist: [],
+      reminderDays: [],
+      source: 'scholarship',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
     setModalOpen(true)
   }
 
@@ -209,6 +278,31 @@ export default function TrackerPage() {
       })
   }, [programs, stageFilter, search, sortBy])
 
+  const activeReminders = useMemo(() => {
+    if (!mounted) return []
+    return getActiveReminders(programs).filter((r) => !dismissedSet.has(r.key))
+  }, [programs, mounted, dismissedSet])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (activeReminders.length === 0) return
+    if (notifPermission !== 'granted') return
+    for (const { program } of activeReminders) {
+      const days = daysUntil(program.deadline)
+      const label = days !== null && days === 0
+        ? 'Deadline is today!'
+        : days !== null
+          ? `Deadline in ${days} day${days === 1 ? '' : 's'}`
+          : 'Reminder'
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`🔔 ${program.name}`, {
+          body: `${program.university} — ${label}`,
+          tag: `reminder-${program.id}`,
+        })
+      }
+    }
+  }, [activeReminders, mounted, notifPermission])
+
   if (!mounted) {
     return <div className="mx-auto max-w-5xl px-4 py-8" />
   }
@@ -223,12 +317,20 @@ export default function TrackerPage() {
             Track, organize, and manage your graduate program applications
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90"
-        >
-          + Add Program
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openAddScholarship}
+            className="rounded-lg border border-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-[var(--bg-accent)] hover:opacity-90"
+          >
+            + Add Scholarship
+          </button>
+          <button
+            onClick={openAdd}
+            className="rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90"
+          >
+            + Add Program
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -240,6 +342,82 @@ export default function TrackerPage() {
       <div className="mb-4">
         <DeadlineTimeline programs={programs} onSelect={openEdit} />
       </div>
+
+      {/* Reminder Notification Banner */}
+      {activeReminders.length > 0 && (
+        <div className="mb-4 rounded-xl border border-[var(--bg-accent)]/30 bg-[var(--bg-accent)]/10 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[var(--bg-accent)]">
+              🔔 {activeReminders.length} program{activeReminders.length > 1 ? 's' : ''} need attention
+            </h3>
+            <button
+              onClick={() => {
+                const keys = activeReminders.map((r) => r.key)
+                dismissAllReminders(keys)
+                setDismissedSet(new Set([...dismissedSet, ...keys]))
+              }}
+              className="text-[10px] text-[var(--text-muted)] hover:text-white"
+            >
+              Dismiss all
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {activeReminders.map((r) => {
+              const { program: p } = r
+              const days = daysUntil(p.deadline)
+              return (
+                <div key={r.key} className="flex items-center justify-between rounded-lg bg-[var(--bg-card)] px-3 py-2">
+                  <button
+                    onClick={() => openEdit(p)}
+                    className="min-w-0 text-left"
+                  >
+                    <p className="text-xs font-medium text-white truncate">{p.name}</p>
+                    <p className="text-[10px] text-[var(--text-muted)]">
+                      {p.university}
+                      {days !== null && (
+                        <span className="ml-1">
+                          — {days === 0 ? 'Deadline today' : `${days} day${days === 1 ? '' : 's'} left`}
+                        </span>
+                      )}
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      dismissReminder(r.key)
+                      setDismissedSet(new Set([...dismissedSet, r.key]))
+                    }}
+                    className="ml-2 shrink-0 rounded p-1 text-[10px] text-[var(--text-muted)] hover:text-white"
+                    title="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          {notifPermission !== 'granted' && 'Notification' in window && (
+            <button
+              onClick={async () => {
+                const result = await Notification.requestPermission()
+                setNotifPermission(result)
+                if (result === 'granted' && activeReminders.length > 0) {
+                  for (const { program: p } of activeReminders) {
+                    new Notification(`🔔 ${p.name}`, {
+                      body: `${p.university} — Reminder active`,
+                      tag: `reminder-${p.id}`,
+                    })
+                  }
+                }
+              }}
+              className="mt-2 text-[10px] text-[var(--bg-primary)] hover:underline"
+            >
+              {notifPermission === 'denied'
+                ? 'Browser notifications are blocked — enable in your browser settings'
+                : 'Enable browser notifications for pop-up alerts'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Search / Sort / Filter */}
       {programs.length > 0 && (

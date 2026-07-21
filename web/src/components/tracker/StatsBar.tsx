@@ -20,14 +20,14 @@ export default function StatsBar({ programs }: StatsBarProps) {
     return d !== null && d >= 0 && d <= 30
   }).length
   const inProgress = programs.filter((p) =>
-    ['applying', 'interview'].includes(p.stage)
+    ['applying', 'interview', 'applied'].includes(p.stage)
   ).length
   const completed = programs.filter((p) =>
-    ['applied', 'accepted'].includes(p.stage)
+    ['accepted'].includes(p.stage)
   ).length
 
   const stats = [
-    { label: 'Total Tracked', value: total, color: 'text-white' },
+    { label: 'Total Tracked', value: total, color: 'var(--text-primary)' },
     { label: 'Overdue', value: overdue, color: 'var(--danger)' },
     { label: 'Due This Month', value: dueThisMonth, color: 'var(--warning)' },
     { label: 'In Progress', value: inProgress, color: 'var(--bg-accent)' },

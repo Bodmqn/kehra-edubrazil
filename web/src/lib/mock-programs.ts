@@ -37,15 +37,22 @@ const defaultPrograms = [
   { name: 'Doutorado em Educação', field: 'Education' },
 ]
 
-function randomDate(from: Date, to: Date): string {
-  const date = new Date(from.getTime() + Math.random() * (to.getTime() - from.getTime()))
-  return date.toISOString().split('T')[0]
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed + 1) * 10000
+  return x - Math.floor(x)
+}
+
+function deterministicDate(seed: number, from: Date, to: Date): string {
+  const t = from.getTime() + seededRandom(seed) * (to.getTime() - from.getTime())
+  return new Date(t).toISOString().split('T')[0]
 }
 
 export function getMockPrograms(acronym: string, universityId: string): Program[] {
   const programs = programNames[acronym] || defaultPrograms
+  const baseSeed = universityId.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
 
   return programs.map((p, index) => {
+    const seed = baseSeed + index * 7
     const isOpen = index % 3 !== 2
     return {
       id: `${universityId}-prog-${index}`,
@@ -53,8 +60,8 @@ export function getMockPrograms(acronym: string, universityId: string): Program[
       name: p.name,
       level: p.name.startsWith('Doutorado') ? 'Doutorado' : 'Mestrado',
       field: p.field,
-      deadline: randomDate(new Date('2026-08-01'), new Date('2026-12-15')),
-      status: isOpen ? 'Aberto' : Math.random() > 0.5 ? 'Fechado' : 'Em Breve',
+      deadline: deterministicDate(seed, new Date('2026-08-01'), new Date('2026-12-15')),
+      status: isOpen ? 'Aberto' : seededRandom(seed + 1) > 0.5 ? 'Fechado' : 'Em Breve',
       edital_url: null,
       scraped_at: new Date().toISOString(),
     }
