@@ -1,28 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NAV_ITEMS } from '@/lib/constants'
-
-function MenuIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-      <line x1="3" y1="18" x2="21" y2="18" />
-    </svg>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -75,78 +56,93 @@ export default function Navbar() {
           />
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`text-sm transition-colors ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-[var(--text-secondary)] hover:text-white'
-                }`}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
+        <div className="flex items-center gap-2">
+          <nav
+            className="hidden lg:flex items-center gap-6"
+            aria-label="Main navigation"
+          >
+            {NAV_ITEMS.map((item) => {
+              const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`text-sm transition-colors ${
+                    isActive
+                      ? 'text-white'
+                      : 'text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
 
-        <button
-          type="button"
-          className="lg:hidden rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] hover:text-white transition-colors"
-          onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          aria-expanded={isMobileMenuOpen}
-          aria-controls="mobile-menu"
-          aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-        >
-          {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
-        </button>
+          <button
+            type="button"
+            className="lg:hidden inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-2 text-white hover:bg-[var(--bg-card-hover)] transition-colors"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {isMobileMenuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 top-16 z-40 lg:hidden"
-          onClick={closeMobileMenu}
-          aria-hidden="true"
-        >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-        </div>
+        <>
+          <div
+            className="fixed inset-0 top-16 z-40"
+            onClick={closeMobileMenu}
+            aria-hidden="true"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          </div>
+          <div
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            className="fixed top-16 left-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--bg-dark)]"
+          >
+            <nav className="flex flex-col gap-1 px-4 pb-6 pt-4" aria-label="Mobile navigation">
+              {NAV_ITEMS.map((item) => {
+                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`rounded-lg px-4 py-3 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-[var(--bg-card)] text-white font-medium'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+        </>
       )}
-
-      <div
-        id="mobile-menu"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Navigation"
-        className={`fixed top-16 left-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--bg-dark)] transition-transform duration-200 lg:hidden ${
-          isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'
-        }`}
-      >
-        <nav className="flex flex-col gap-1 px-4 pb-6 pt-4" aria-label="Mobile navigation">
-          {NAV_ITEMS.map((item) => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMobileMenu}
-                aria-current={isActive ? 'page' : undefined}
-                className={`rounded-lg px-4 py-3 text-sm transition-colors ${
-                  isActive
-                    ? 'bg-[var(--bg-card)] text-white font-medium'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white'
-                }`}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
     </header>
   )
 }
