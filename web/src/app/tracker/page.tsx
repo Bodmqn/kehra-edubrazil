@@ -69,6 +69,7 @@ export default function TrackerPage() {
     if (typeof window !== 'undefined' && 'Notification' in window) return Notification.permission
     return 'denied'
   })
+  const [formKey, setFormKey] = useState(0)
 
   const saveToStorage = (updated: TrackerProgram[]) => {
     setPrograms(updated)
@@ -144,6 +145,7 @@ export default function TrackerPage() {
   const openAdd = () => {
     setEditing(null)
     setModalOpen(true)
+    setFormKey((k) => k + 1)
   }
 
   const openAddScholarship = () => {
@@ -164,6 +166,7 @@ export default function TrackerPage() {
       updatedAt: new Date().toISOString(),
     })
     setModalOpen(true)
+    setFormKey((k) => k + 1)
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -518,7 +521,7 @@ export default function TrackerPage() {
 
       {/* Modal */}
       <TrackerModal
-        key={editing?.id ?? 'new'}
+        key={editing?.id ?? formKey}
         open={modalOpen}
         program={editing}
         onSave={handleSave}
