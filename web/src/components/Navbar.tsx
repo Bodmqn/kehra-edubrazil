@@ -75,7 +75,7 @@ export default function Navbar() {
           />
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
             return (
@@ -97,7 +97,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="md:hidden p-2 text-[var(--text-secondary)] hover:text-white transition-colors"
+          className="lg:hidden rounded-lg border border-[var(--border)] p-2 text-[var(--text-secondary)] hover:text-white transition-colors"
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-menu"
@@ -109,7 +109,7 @@ export default function Navbar() {
 
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 top-16 z-40 md:hidden"
+          className="fixed inset-0 top-16 z-40 lg:hidden"
           onClick={closeMobileMenu}
           aria-hidden="true"
         >
@@ -122,7 +122,7 @@ export default function Navbar() {
         role="dialog"
         aria-modal="true"
         aria-label="Navigation"
-        className={`fixed top-16 left-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--bg-dark)] transition-transform duration-200 md:hidden ${
+        className={`fixed top-16 left-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--bg-dark)] transition-transform duration-200 lg:hidden ${
           isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
