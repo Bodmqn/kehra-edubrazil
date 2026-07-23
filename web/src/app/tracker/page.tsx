@@ -70,6 +70,7 @@ export default function TrackerPage() {
     return 'denied'
   })
   const [formKey, setFormKey] = useState(0)
+  const [syncError, setSyncError] = useState('')
 
   const saveToStorage = (updated: TrackerProgram[]) => {
     setPrograms(updated)
@@ -79,27 +80,32 @@ export default function TrackerPage() {
   const syncReminderToServer = useCallback(
     async (program: TrackerProgram) => {
       if (!subscriptionToken) return
-      if (program.reminderDays.length === 0) {
-        fetch('/.netlify/functions/sync-reminders', {
-          method: 'DELETE',
+      setSyncError('')
+      const method = program.reminderDays.length === 0 ? 'DELETE' : 'POST'
+      const body = method === 'DELETE'
+        ? { token: subscriptionToken, programId: program.id }
+        : {
+            token: subscriptionToken,
+            programId: program.id,
+            programName: program.name,
+            university: program.university,
+            deadline: program.deadline,
+            reminderDays: program.reminderDays,
+            source: program.source ?? 'manual',
+          }
+      try {
+        const resp = await fetch('/.netlify/functions/sync-reminders', {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: subscriptionToken, programId: program.id }),
-        }).catch(() => {})
-        return
+          body: JSON.stringify(body),
+        })
+        if (!resp.ok) {
+          const result = await resp.json()
+          throw new Error(result.error || `Server returned ${resp.status}`)
+        }
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : 'Failed to sync reminder')
       }
-      fetch('/.netlify/functions/sync-reminders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: subscriptionToken,
-          programId: program.id,
-          programName: program.name,
-          university: program.university,
-          deadline: program.deadline,
-          reminderDays: program.reminderDays,
-          source: program.source ?? 'manual',
-        }),
-      }).catch(() => {})
     },
     [subscriptionToken]
   )
@@ -119,15 +125,23 @@ export default function TrackerPage() {
     setEditing(null)
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Remove this program from your tracker?')) return
     saveToStorage(programs.filter((p) => p.id !== id))
     if (subscriptionToken) {
-      fetch('/.netlify/functions/sync-reminders', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: subscriptionToken, programId: id }),
-      }).catch(() => {})
+      try {
+        const resp = await fetch('/.netlify/functions/sync-reminders', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: subscriptionToken, programId: id }),
+        })
+        if (!resp.ok) {
+          const result = await resp.json()
+          throw new Error(result.error || `Server returned ${resp.status}`)
+        }
+      } catch (e) {
+        setSyncError(e instanceof Error ? e.message : 'Failed to delete reminder')
+      }
     }
   }
 
@@ -516,6 +530,11 @@ export default function TrackerPage() {
               {emailStatus === 'sending' ? 'Subscribing…' : 'Subscribe'}
             </button>
           </form>
+        )}
+        {syncError && (
+          <p className="mt-3 text-xs text-[var(--danger)]">
+            Sync error: {syncError}
+          </p>
         )}
       </div>
 
