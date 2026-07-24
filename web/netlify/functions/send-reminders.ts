@@ -2,12 +2,6 @@ import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 
-interface University {
-  id: string
-  name: string
-  acronym: string
-}
-
 interface UserReminder {
   id: string
   subscription_token: string
@@ -17,13 +11,6 @@ interface UserReminder {
   deadline: string | null
   reminder_days: number[]
   last_notified_at: string | null
-}
-
-function getTodayUTC(): string {
-  const now = new Date()
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-    .toISOString()
-    .split('T')[0]
 }
 
 function daysBetweenUTCDates(dateStr: string): number {
@@ -95,46 +82,10 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     },
   })
 
-  const today = getTodayUTC()
-  let totalSent = 0
   let targetedSent = 0
   const errors: string[] = []
 
-  // ── Part 1: Broadcast — upcoming deadlines from the programs table ──
-  const sevenDaysFromNow = new Date()
-  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
-  const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
-
-  const { data: programs } = await supabase
-    .from('programs')
-    .select('name, level, deadline, university_id')
-    .gte('deadline', today)
-    .lte('deadline', sevenDaysStr)
-    .neq('status', 'Fechado')
-
-  let broadcastLines: string[] = []
-  if (programs && programs.length > 0) {
-    const universityIds = [...new Set(programs.map(p => p.university_id))]
-    const { data: universities } = await supabase
-      .from('universities')
-      .select('id, name, acronym')
-      .in('id', universityIds)
-
-    const uniMap = new Map<string, string>()
-    if (universities) {
-      for (const u of universities as University[]) {
-        uniMap.set(u.id, `${u.name} (${u.acronym})`)
-      }
-    }
-
-    broadcastLines = programs.map(p => {
-      const uniName = uniMap.get(p.university_id) || 'Unknown university'
-      const daysLeft = daysBetweenUTCDates(p.deadline)
-      return `  \u2022 ${p.name} (${p.level}) at ${uniName}\n    Deadline: ${p.deadline} (${daysLeft} day${daysLeft !== 1 ? 's' : ''} away)`
-    })
-  }
-
-  // ── Part 2: Targeted — per-user reminders from user_reminders ──
+  // ── Targeted — per-user reminders from user_reminders ──
   const { data: allReminders } = await supabase
     .from('user_reminders')
     .select('*')
@@ -180,28 +131,6 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     }
   }
 
-  // ── Send broadcast ──
-  if (broadcastLines.length > 0) {
-    const subject = `\uD83D\uDCE2 ${broadcastLines.length} graduate program deadline${broadcastLines.length !== 1 ? 's' : ''} approaching this week`
-
-    for (const s of subscribers) {
-      const broadcastBody = `Hi there,
-
-Here are the upcoming graduate program deadlines at Brazilian universities:
-
-${broadcastLines.join('\n')}
-
-Start preparing your application today!
-
-To unsubscribe, click: ${siteUrl}/unsubscribe?token=${s.token}
-
-— Kehra \u2022 EduBrazil Hub`
-
-      const ok = await sendMail(s.email, subject, broadcastBody)
-      if (ok) totalSent++
-    }
-  }
-
   // ── Send targeted ──
   for (const [token, reminders] of userReminderMap) {
     const email = subscriberMap.get(token)
@@ -226,7 +155,7 @@ Log in to your tracker to view details and manage your applications.
 
 To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
 
-— Kehra \u2022 EduBrazil Hub`
+— EduBrazil Hub + The Kehra`
 
     const ok = await sendMail(
       email,
@@ -246,8 +175,8 @@ To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
 
   // ── Log ──
   await supabase.from('reminder_logs').insert({
-    programs_count: (programs?.length || 0) + dueReminders.length,
-    recipients_count: totalSent + targetedSent,
+    programs_count: dueReminders.length,
+    recipients_count: targetedSent,
     sent_at: new Date().toISOString(),
   }).maybeSingle()
 
@@ -256,9 +185,7 @@ To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
     headers,
     body: JSON.stringify({
       success: true,
-      broadcast_sent: totalSent,
       targeted_sent: targetedSent,
-      programs: programs?.length || 0,
       user_reminders: dueReminders.length,
       ...(errors.length > 0 && { errors }),
     }),
