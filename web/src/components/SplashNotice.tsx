@@ -16,8 +16,6 @@ const FALLBACK = {
 export default function SplashNotice() {
   const [config, setConfig] = useState(FALLBACK)
   const [visible, setVisible] = useState(false)
-  const [secondsLeft, setSecondsLeft] = useState(FALLBACK.timer_seconds)
-  const [showClose, setShowClose] = useState(false)
 
   useEffect(() => {
     supabase.from('splash_notice').select('*').limit(1).maybeSingle().then(({ data }) => {
@@ -29,7 +27,6 @@ export default function SplashNotice() {
           timer_seconds: data.timer_seconds ?? 9,
           dismiss_hours: data.dismiss_hours ?? 24,
         })
-        setSecondsLeft(data.timer_seconds ?? 9)
       }
     })
   }, [])
@@ -47,21 +44,6 @@ export default function SplashNotice() {
     })
   }, [config.enabled, config.dismiss_hours])
 
-  useEffect(() => {
-    if (!visible) return
-    const interval = setInterval(() => {
-      setSecondsLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          setShowClose(true)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [visible])
-
   const dismiss = () => {
     localStorage.setItem(SPLASH_KEY, Date.now().toString())
     setVisible(false)
@@ -75,22 +57,14 @@ export default function SplashNotice() {
       <div className="mx-4 max-w-lg rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-8 text-center shadow-2xl">
         <div className="mb-4 text-4xl">📢</div>
         <h2 className="mb-4 text-xl font-bold text-white">{config.title}</h2>
-        <p className="mb-6 text-sm leading-relaxed text-[var(--text-secondary)]">
+        <p className="mb-6 text-sm leading-relaxed text-white/90">
           {config.message}
-        </p>
-        <p className="mb-4 text-xs text-[var(--text-muted)]">
-          {showClose ? 'Thank you.' : 'Please wait...'}
         </p>
         <button
           onClick={dismiss}
-          disabled={!showClose}
-          className={`rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-            showClose
-              ? 'bg-[var(--bg-accent)] text-black hover:opacity-90'
-              : 'bg-[var(--border)] text-[var(--text-muted)] cursor-not-allowed'
-          }`}
+          className="rounded-lg bg-[var(--bg-accent)] px-6 py-2.5 text-sm font-medium text-black hover:opacity-90"
         >
-          {showClose ? 'Close' : `Wait ${secondsLeft}s`}
+          Continue
         </button>
       </div>
     </div>
