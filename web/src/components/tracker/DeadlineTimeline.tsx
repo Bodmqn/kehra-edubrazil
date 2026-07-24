@@ -2,6 +2,9 @@
 
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import { daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
+import { universities } from '@/lib/data'
+
+const uniAcronym = new Map(universities.map(u => [u.name, u.acronym]))
 
 interface DeadlineTimelineProps {
   programs: TrackerProgram[]
@@ -38,11 +41,11 @@ export default function DeadlineTimeline({ programs, onSelect }: DeadlineTimelin
               key={p.id}
               onClick={() => onSelect(p)}
               className={`flex shrink-0 flex-col items-center justify-end gap-1 rounded-lg px-2 pb-2 transition-all hover:opacity-80 ${size}`}
-              style={{ backgroundColor: urgency.color + '15', minWidth: '64px' }}
-              title={`${p.name} — ${formatDate(p.deadline)}`}
+              style={{ backgroundColor: urgency.color + '15', minWidth: '72px' }}
+              title={`${p.name} at ${p.university} — ${formatDate(p.deadline)}`}
             >
-              <span className="max-w-[56px] truncate text-[9px] text-[var(--text-secondary)] leading-tight">
-                {p.university.length > 12 ? p.university.slice(0, 10) + '…' : p.university}
+              <span className="max-w-[64px] truncate text-[9px] text-[var(--text-secondary)] leading-tight">
+                {uniAcronym.get(p.university) || p.university}
               </span>
               <span
                 className="text-[10px] font-semibold leading-none"
