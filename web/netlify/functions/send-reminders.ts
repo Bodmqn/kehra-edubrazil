@@ -161,7 +161,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   }
 
   const subscriberMap = new Map(subscribers.map(s => [s.token, s.email]))
-  const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://kehra-edubrazil.netlify.app'
+  const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://edubrazil-kehra.netlify.app'
 
   async function sendMail(to: string, subject: string, text: string): Promise<boolean> {
     try {

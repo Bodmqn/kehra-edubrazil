@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kehra-edubrazil.netlify.app/sitemap.xml
+Sitemap: https://edubrazil-kehra.netlify.app/sitemap.xml

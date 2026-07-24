@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kehra-edubrazil.netlify.app'),
+  metadataBase: new URL('https://edubrazil-kehra.netlify.app'),
   title: {
     default: 'Kehra • EduBrazil Hub — Graduate Programs in Brazil',
     template: '%s • Kehra EduBrazil Hub',
