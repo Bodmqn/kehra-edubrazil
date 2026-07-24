@@ -3,7 +3,7 @@ import type { Region, UniversityType } from './types'
 export const REGIONS: { key: Region; label: string; color: string }[] = [
   { key: 'Norte', label: 'Norte', color: '#009739' },
   { key: 'Nordeste', label: 'Nordeste', color: '#FEDD00' },
-  { key: 'Centro-Oeste', label: 'Centro-Oeste', color: '#002776' },
+  { key: 'Centro-Oeste', label: 'Centro-Oeste', color: '#1E88E5' },
   { key: 'Sudeste', label: 'Sudeste', color: '#FF6B35' },
   { key: 'Sul', label: 'Sul', color: '#7C3AED' },
 ]
