@@ -38,7 +38,7 @@ export default function UniversityCard({ university, programCount }: UniversityC
     >
       <div className="mb-3 flex items-start justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-primary)]/10 text-sm font-bold text-[var(--bg-primary)]">
-          {university.acronym.slice(0, 2)}
+          {university.acronym}
         </div>
         <div className="flex items-center gap-1.5">
           {inTracker && (
