@@ -1,0 +1,19 @@
+name: Send Reminder Emails
+
+on:
+  schedule:
+    # Runs daily at 6 AM UTC (same time as the scrape)
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger send-reminders function
+        run: |
+          curl -s -X POST "${{ secrets.SITE_URL }}/.netlify/functions/send-reminders" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -d '{}'

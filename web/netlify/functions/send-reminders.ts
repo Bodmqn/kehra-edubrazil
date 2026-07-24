@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
 import { createClient } from '@supabase/supabase-js'
+import nodemailer from 'nodemailer'
 
 interface University {
   id: string
@@ -18,6 +19,21 @@ interface UserReminder {
   last_notified_at: string | null
 }
 
+function getTodayUTC(): string {
+  const now = new Date()
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+    .toISOString()
+    .split('T')[0]
+}
+
+function daysBetweenUTCDates(dateStr: string): number {
+  const deadlineUTC = new Date(dateStr)
+  const now = new Date()
+  const nowUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+  const diff = deadlineUTC.getTime() - nowUTC.getTime()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
 export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const headers = { 'Content-Type': 'application/json' }
 
@@ -27,42 +43,66 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-  const resendApiKey = process.env.RESEND_API_KEY
+  const cronSecret = process.env.CRON_SECRET
+  const gmailUser = process.env.GMAIL_USER
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server misconfigured: missing Supabase env vars' }) }
   }
 
-  if (!resendApiKey) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server misconfigured: missing RESEND_API_KEY' }) }
+  if (!gmailUser || !gmailAppPassword) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server misconfigured: missing GMAIL_USER or GMAIL_APP_PASSWORD' }) }
   }
 
-  // Verify admin if auth header is present
+  if (!cronSecret) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server misconfigured: missing CRON_SECRET' }) }
+  }
+
+  // ── Auth: CRON_SECRET header (GitHub Actions) or admin Bearer token ──
+  const cronHeader = event.headers['x-cron-secret']
+  const isCron = cronHeader === cronSecret
+
+  let isAdmin = false
   const authHeader = event.headers.authorization
-  if (authHeader?.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ') && !isCron) {
     const accessToken = authHeader.slice(7)
     const authClient = createClient(supabaseUrl, supabaseServiceKey)
-    const { data: { user }, error: authError } = await authClient.auth.getUser(accessToken)
-    if (!authError && user?.email) {
+    const { data: { user } } = await authClient.auth.getUser(accessToken)
+    if (user?.email) {
       const { data: adminUser } = await authClient
         .from('admin_users')
         .select('email')
         .eq('email', user.email)
         .maybeSingle()
-      if (!adminUser) {
-        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Not an admin' }) }
-      }
+      if (adminUser) isAdmin = true
     }
   }
 
+  if (!isCron && !isAdmin) {
+    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Not authorized' }) }
+  }
+
+  // ── Setup ──
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  const today = new Date().toISOString().split('T')[0]
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+  })
+
+  const today = getTodayUTC()
   let totalSent = 0
   let targetedSent = 0
+  const errors: string[] = []
 
   // ── Part 1: Broadcast — upcoming deadlines from the programs table ──
-  const now = new Date()
-  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const sevenDaysFromNow = new Date()
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
   const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0]
 
   const { data: programs } = await supabase
@@ -89,8 +129,8 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
 
     broadcastLines = programs.map(p => {
       const uniName = uniMap.get(p.university_id) || 'Unknown university'
-      const daysLeft = Math.ceil((new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      return `  • ${p.name} (${p.level}) at ${uniName}\n    Deadline: ${p.deadline} (${daysLeft} day${daysLeft !== 1 ? 's' : ''} away)`
+      const daysLeft = daysBetweenUTCDates(p.deadline)
+      return `  \u2022 ${p.name} (${p.level}) at ${uniName}\n    Deadline: ${p.deadline} (${daysLeft} day${daysLeft !== 1 ? 's' : ''} away)`
     })
   }
 
@@ -101,14 +141,10 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
 
   const dueReminders: UserReminder[] = (allReminders as UserReminder[] || []).filter((r) => {
     if (!r.deadline || !r.reminder_days || r.reminder_days.length === 0) return false
-    const deadlineDate = new Date(r.deadline)
-    const todayDate = new Date()
-    todayDate.setHours(0, 0, 0, 0)
-    const diff = Math.ceil((deadlineDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
+    const diff = daysBetweenUTCDates(r.deadline)
     return r.reminder_days.includes(diff)
   })
 
-  // Group targeted reminders by subscription token
   const userReminderMap = new Map<string, UserReminder[]>()
   for (const r of dueReminders) {
     const list = userReminderMap.get(r.subscription_token) || []
@@ -116,7 +152,6 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     userReminderMap.set(r.subscription_token, list)
   }
 
-  // Get all subscribers
   const { data: subscribers } = await supabase
     .from('email_subscriptions')
     .select('email, token')
@@ -125,14 +160,29 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, sent: 0, reason: 'No subscribers' }) }
   }
 
-  // ── Send emails ──
   const subscriberMap = new Map(subscribers.map(s => [s.token, s.email]))
-
   const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://kehra-edubrazil.netlify.app'
 
-  // Send broadcast (individual emails with personalized unsubscribe link)
+  async function sendMail(to: string, subject: string, text: string): Promise<boolean> {
+    try {
+      await transporter.sendMail({
+        from: `"Kehra EduBrazil" <${gmailUser}>`,
+        to,
+        subject,
+        text,
+      })
+      return true
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      errors.push(`Failed to send to ${to}: ${msg}`)
+      console.error('[send-reminders] Error sending to', to, ':', msg)
+      return false
+    }
+  }
+
+  // ── Send broadcast ──
   if (broadcastLines.length > 0) {
-    const subject = `📢 ${broadcastLines.length} graduate program deadline${broadcastLines.length !== 1 ? 's' : ''} approaching this week`
+    const subject = `\uD83D\uDCE2 ${broadcastLines.length} graduate program deadline${broadcastLines.length !== 1 ? 's' : ''} approaching this week`
 
     for (const s of subscribers) {
       const broadcastBody = `Hi there,
@@ -145,38 +195,25 @@ Start preparing your application today!
 
 To unsubscribe, click: ${siteUrl}/unsubscribe?token=${s.token}
 
-— Kehra • EduBrazil Hub`
+— Kehra \u2022 EduBrazil Hub`
 
-      const resp = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Kehra EduBrazil <onboarding@resend.dev>',
-          to: [s.email],
-          subject,
-          text: broadcastBody,
-        }),
-      })
-
-      if (resp.ok) totalSent++
+      const ok = await sendMail(s.email, subject, broadcastBody)
+      if (ok) totalSent++
     }
   }
 
-  // Send targeted per-user reminders
+  // ── Send targeted ──
   for (const [token, reminders] of userReminderMap) {
     const email = subscriberMap.get(token)
     if (!email) continue
 
     const lines = reminders.map(r => {
-      if (!r.deadline) return `  • ${r.program_name} at ${r.university}`
-      const daysLeft = Math.ceil((new Date(r.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (!r.deadline) return `  \u2022 ${r.program_name} at ${r.university}`
+      const daysLeft = daysBetweenUTCDates(r.deadline)
       const label = daysLeft <= 0
         ? 'Deadline is today!'
         : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} away`
-      return `  • ${r.program_name} at ${r.university}\n    Deadline: ${r.deadline} (${label})`
+      return `  \u2022 ${r.program_name} at ${r.university}\n    Deadline: ${r.deadline} (${label})`
     })
 
     const body = `Hi there,
@@ -189,25 +226,16 @@ Log in to your tracker to view details and manage your applications.
 
 To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
 
-— Kehra • EduBrazil Hub`
+— Kehra \u2022 EduBrazil Hub`
 
-    const resendResp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Kehra EduBrazil <onboarding@resend.dev>',
-        to: [email],
-        subject: `🔔 ${reminders.length} program reminder${reminders.length !== 1 ? 's' : ''} from your tracker`,
-        text: body,
-      }),
-    })
+    const ok = await sendMail(
+      email,
+      `\uD83D\uDD14 ${reminders.length} program reminder${reminders.length !== 1 ? 's' : ''} from your tracker`,
+      body
+    )
 
-    if (resendResp.ok) {
+    if (ok) {
       targetedSent++
-
       const ids = reminders.map(r => r.id)
       await supabase
         .from('user_reminders')
@@ -216,7 +244,7 @@ To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
     }
   }
 
-  // Log the send
+  // ── Log ──
   await supabase.from('reminder_logs').insert({
     programs_count: (programs?.length || 0) + dueReminders.length,
     recipients_count: totalSent + targetedSent,
@@ -232,6 +260,7 @@ To unsubscribe, click: ${siteUrl}/unsubscribe?token=${token}
       targeted_sent: targetedSent,
       programs: programs?.length || 0,
       user_reminders: dueReminders.length,
+      ...(errors.length > 0 && { errors }),
     }),
   }
 }
