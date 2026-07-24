@@ -141,7 +141,7 @@ export default function AdminTriggerPage() {
           {reminderStatus === 'success' && (
             <div className="mt-3 space-y-1">
               <p className="text-xs text-[var(--success)]">✅ {reminderMessage}</p>
-              {reminderResult?.errors && Array.isArray(reminderResult.errors) && reminderResult.errors.length > 0 && (
+              {Array.isArray(reminderResult?.errors) && reminderResult.errors.length > 0 && (
                 <div>
                   <p className="mt-2 text-[10px] font-medium text-[var(--danger)]">Errors:</p>
                   {(reminderResult.errors as string[]).map((e, i) => (
@@ -149,9 +149,9 @@ export default function AdminTriggerPage() {
                   ))}
                 </div>
               )}
-              {reminderResult?.reason && (
-                <p className="text-[10px] text-[var(--text-muted)]">Reason: {reminderResult.reason as string}</p>
-              )}
+              {reminderResult?.reason ? (
+                <p className="text-[10px] text-[var(--text-muted)]">Reason: {String(reminderResult.reason)}</p>
+              ) : null}
             </div>
           )}
           {reminderStatus === 'error' && (
