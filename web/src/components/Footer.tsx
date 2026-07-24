@@ -7,7 +7,7 @@ export default function Footer() {
             © {new Date().getFullYear()} EduBrazil Hub + The Kehra
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            EduBrazil Hub + The Kehra — Connecting international students to Brazilian graduate programs
+            — Connecting international students to Brazilian graduate programs
           </p>
         </div>
       </div>
