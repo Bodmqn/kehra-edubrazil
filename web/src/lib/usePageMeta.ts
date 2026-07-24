@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 
 export function usePageMeta(title: string, description?: string) {
   useEffect(() => {
-    document.title = `${title} • Kehra EduBrazil Hub`
+    document.title = `${title} • EduBrazil Hub + The Kehra`
     if (description) {
       let meta = document.querySelector('meta[name="description"]')
       if (!meta) {

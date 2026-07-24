@@ -1,4 +1,4 @@
--- Kehra • EduBrazil Hub — Safe Migration (re-runnable)
+-- EduBrazil Hub + The Kehra — Safe Migration (re-runnable)
 
 -- Universities
 CREATE TABLE IF NOT EXISTS universities (

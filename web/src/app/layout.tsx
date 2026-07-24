@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://edubrazil-kehra.netlify.app'),
   title: {
-    default: 'Kehra • EduBrazil Hub — Graduate Programs in Brazil',
-    template: '%s • Kehra EduBrazil Hub',
+    default: 'EduBrazil Hub + The Kehra — Graduate Programs in Brazil',
+    template: '%s • EduBrazil Hub + The Kehra',
   },
   description:
     'Find Masters and PhD programs across 109 Brazilian universities. Browse, compare, and apply to graduate programs with live deadline tracking.',
@@ -28,11 +28,11 @@ export const metadata: Metadata = {
     icon: '/logo.png',
   },
   openGraph: {
-    title: 'Kehra • EduBrazil Hub',
+    title: 'EduBrazil Hub + The Kehra',
     description: 'Find Masters and PhD programs across 109 Brazilian universities.',
     type: 'website',
     locale: 'en_US',
-    siteName: 'Kehra EduBrazil Hub',
+    siteName: 'EduBrazil Hub + The Kehra',
     images: [{ url: '/logo.png', width: 901, height: 460 }],
   },
 }

@@ -35,7 +35,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-8">
         <h1 className="mb-1 text-xl font-bold text-white">Admin Login</h1>
         <p className="mb-6 text-xs text-[var(--text-muted)]">
-          Sign in to manage Kehra • EduBrazil Hub
+          Sign in to manage EduBrazil Hub + The Kehra
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,4 +1,4 @@
-# Kehra • EduBrazil Hub
+# EduBrazil Hub + The Kehra
 
 A graduate program aggregator for international students to find Masters and PhD programs across 109 Brazilian universities, with live deadline tracking from SIGAA portals.
 

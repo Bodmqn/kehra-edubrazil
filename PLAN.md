@@ -1,4 +1,4 @@
-# Kehra • EduBrazil Hub — Complete Build Plan
+# EduBrazil Hub + The Kehra — Complete Build Plan
 
 ---
 
@@ -6,7 +6,7 @@
 
 | Item | Decision |
 |------|----------|
-| **Name** | Kehra + EduBrazil Hub (styled as **Kehra • EduBrazil Hub**) |
+| **Name** | EduBrazil Hub + The Kehra |
 | **Logo** | `kehra-edubrazil/public/logo.png` |
 | **Folder** | `kehra-edubrazil/` |
 | **Domain** | Netlify deployment |
@@ -169,4 +169,4 @@ Daily 6 AM UTC → GitHub Actions Runner
 ---
 
 *Saved on: July 17, 2026*
-*Project: Kehra • EduBrazil Hub*
+*Project: EduBrazil Hub + The Kehra*

@@ -166,7 +166,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   async function sendMail(to: string, subject: string, text: string): Promise<boolean> {
     try {
       await transporter.sendMail({
-        from: `"Kehra EduBrazil" <${gmailUser}>`,
+        from: `"EduBrazil Hub + The Kehra" <${gmailUser}>`,
         to,
         subject,
         text,

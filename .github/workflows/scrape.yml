@@ -1,4 +1,4 @@
-name: Daily Scrape — Kehra EduBrazil Hub
+name: Daily Scrape — EduBrazil Hub + The Kehra
 
 on:
   schedule:

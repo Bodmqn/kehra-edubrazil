@@ -1,4 +1,4 @@
--- Kehra • EduBrazil Hub — Supabase Schema
+-- EduBrazil Hub + The Kehra — Supabase Schema
 
 -- Universities (seeded from CSV)
 CREATE TABLE universities (
