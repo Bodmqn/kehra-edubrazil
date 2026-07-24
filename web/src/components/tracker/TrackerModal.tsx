@@ -152,7 +152,7 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
     if (!name.trim() || !university.trim()) return
 
     onSave({
-      id: program?.id ?? generateId(),
+      id: program?.id || generateId(),
       name: name.trim(),
       university: university.trim(),
       universityId: program?.universityId,
