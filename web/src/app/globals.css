@@ -44,6 +44,12 @@
   filter: invert(1);
 }
 
+[data-theme="light"] [data-region="Nordeste"] {
+  color: #737000 !important;
+  border-color: rgba(115, 112, 0, 0.2) !important;
+  background-color: rgba(115, 112, 0, 0.1) !important;
+}
+
 @theme inline {
   --color-primary: var(--bg-primary);
   --color-accent: var(--bg-accent);

@@ -28,6 +28,7 @@ export default function Badge({ variant = 'region', color, children }: BadgeProp
   return (
     <span
       className={baseStyle}
+      data-region={variant === 'region' ? children : undefined}
       style={{
         backgroundColor: bgColor,
         borderColor: borderColor,
