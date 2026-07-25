@@ -37,7 +37,7 @@ export default function UniversityCard({ university, programCount }: UniversityC
       className="group rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--bg-primary)]/30 hover:bg-[var(--bg-card-hover)]"
     >
       <div className="mb-3 flex items-start justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--bg-primary)]/10 text-sm font-bold text-[var(--bg-primary)]">
+        <div className="flex h-10 items-center rounded-lg bg-[var(--bg-primary)]/10 px-2 text-sm font-bold text-[var(--bg-primary)]">
           {university.acronym}
         </div>
         <div className="flex items-center gap-1.5">
