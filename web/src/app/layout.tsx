@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import SkipLink from '@/components/SkipLink'
 import GeneralNoticeBar from '@/components/GeneralNoticeBar'
+import ThemeProvider from '@/components/ThemeProvider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -46,15 +47,19 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="dark"
+      suppressHydrationWarning
     >
-      <body className="min-h-full bg-[var(--bg-dark)] font-sans text-white">
-        <SkipLink />
-        <Navbar />
-        <GeneralNoticeBar />
-        <main id="main-content" className="pt-16" tabIndex={-1}>
-          {children}
-        </main>
-        <Footer />
+      <body className="min-h-full bg-[var(--bg-dark)] font-sans" style={{ color: 'var(--text-primary)' }}>
+        <ThemeProvider>
+          <SkipLink />
+          <Navbar />
+          <GeneralNoticeBar />
+          <main id="main-content" className="pt-16" tabIndex={-1}>
+            {children}
+          </main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   )

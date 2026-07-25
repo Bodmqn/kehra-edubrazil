@@ -170,6 +170,7 @@ export default function ProgramsContent() {
       <button
         onClick={() => { resetForm(); setShowForm(true) }}
         className="mb-4 rounded-lg bg-[var(--bg-primary)] px-4 py-2 text-xs font-medium text-white"
+        style={{ color: 'white' }}
       >
         + Add Program
       </button>

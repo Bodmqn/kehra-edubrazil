@@ -96,6 +96,7 @@ export default function AdminTriggerPage() {
             onClick={handleTriggerScrape}
             disabled={scrapeStatus === 'triggering'}
             className="w-full rounded-lg bg-[var(--bg-primary)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            style={{ color: 'white' }}
           >
             {scrapeStatus === 'triggering' ? 'Triggering…' : 'Trigger Scrape Now'}
           </button>

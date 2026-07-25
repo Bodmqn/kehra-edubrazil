@@ -13,6 +13,7 @@ export default function NotFound() {
       <Link
         href="/"
         className="mt-6 rounded-lg bg-[var(--bg-primary)] px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+        style={{ color: 'white' }}
       >
         Go home
       </Link>

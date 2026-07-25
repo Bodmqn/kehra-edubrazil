@@ -89,6 +89,7 @@ export default function AdminUsersPage() {
           onClick={handleAdd}
           disabled={saving || !newEmail.trim()}
           className="rounded-lg bg-[var(--bg-primary)] px-4 py-2 text-xs font-medium text-white disabled:opacity-50"
+          style={{ color: 'white' }}
         >
           {saving ? 'Adding…' : 'Add Admin'}
         </button>

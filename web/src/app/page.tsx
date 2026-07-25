@@ -62,6 +62,7 @@ export default function HomePage() {
               <Link
                 href="/universities"
                 className="rounded-lg bg-[var(--bg-primary)] px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                style={{ color: 'white' }}
               >
                 Browse Universities
               </Link>

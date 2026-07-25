@@ -230,6 +230,7 @@ export default function AdminNoticePage() {
                           ? 'border border-[var(--border)] text-[var(--text-secondary)]'
                           : 'bg-[var(--bg-primary)] text-white'
                       }`}
+                      style={{ color: n.active ? undefined : 'white' }}
                     >
                       {n.active ? 'Deactivate' : 'Activate'}
                     </button>

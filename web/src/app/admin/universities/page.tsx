@@ -163,6 +163,7 @@ export default function AdminUniversitiesPage() {
                           onClick={() => saveEdit(u.id)}
                           disabled={saving}
                           className="rounded bg-[var(--bg-primary)] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                          style={{ color: 'white' }}
                         >
                           {saving ? 'Saving…' : 'Save'}
                         </button>
