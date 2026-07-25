@@ -143,8 +143,8 @@ export default function MapPage() {
       </div>
 
       {/* Map */}
-      <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
-        <div className="relative flex aspect-[1000/912] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/5 to-[var(--bg-secondary)]/5">
+      <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-dark)]">
+        <div className="relative flex aspect-[1000/912] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/10 to-[var(--bg-secondary)]/10">
           {/* Brazil state outlines background */}
           <img
             src="/brazil.svg"
@@ -180,7 +180,7 @@ export default function MapPage() {
 
                 {/* Hover label — full name */}
                 {isHovered && (
-                  <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--bg-dark)] px-2 py-1 text-xs text-white shadow-lg z-20 pointer-events-none">
+                  <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--bg-card)] px-2 py-1 text-xs text-white shadow-lg z-20 pointer-events-none">
                     {u.name}
                   </span>
                 )}
