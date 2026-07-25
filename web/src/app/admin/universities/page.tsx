@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import SearchInput from '@/components/SearchInput'
 import type { University } from '@/lib/types'
 
 export default function AdminUniversitiesPage() {
@@ -98,13 +99,13 @@ export default function AdminUniversitiesPage() {
         Edit school_url and sigaa_url for any university.
       </p>
 
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by name, acronym, or state…"
-        className="mb-4 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none"
-      />
+      <div className="mb-4">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by name, acronym, or state…"
+        />
+      </div>
 
       {message && (
         <p

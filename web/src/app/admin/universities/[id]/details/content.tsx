@@ -119,7 +119,7 @@ export default function DetailsContent() {
         href={`/admin/universities/${id}/programs`}
         className="mb-4 inline-block rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-white"
       >
-        📋 Manage Programs for this University →
+        Manage Programs for this University →
       </Link>
 
       <div className="mt-4 space-y-4">

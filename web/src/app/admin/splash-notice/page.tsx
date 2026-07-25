@@ -8,14 +8,12 @@ interface SplashConfig {
   title: string
   message: string
   enabled: boolean
-  timer_seconds: number
   dismiss_hours: number
 }
 
 const DEFAULTS = {
   title: 'General Notice',
   message: '',
-  timer_seconds: 9,
   dismiss_hours: 24,
 }
 
@@ -52,7 +50,6 @@ export default function AdminSplashNoticePage() {
         title: config.title,
         message: config.message,
         enabled: config.enabled,
-        timer_seconds: config.timer_seconds,
         dismiss_hours: config.dismiss_hours,
       }
       if (config.id) {
@@ -120,25 +117,14 @@ export default function AdminSplashNoticePage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block text-[11px] text-[var(--text-secondary)]">Timer (seconds)</label>
-              <input
-                type="number"
-                value={config.timer_seconds}
-                onChange={(e) => setConfig({ ...config, timer_seconds: Math.max(0, parseInt(e.target.value) || 0) })}
-                className="w-full rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2.5 py-1.5 text-xs text-white outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11px] text-[var(--text-secondary)]">Re-appear after (hours)</label>
-              <input
-                type="number"
-                value={config.dismiss_hours}
-                onChange={(e) => setConfig({ ...config, dismiss_hours: Math.max(1, parseInt(e.target.value) || 1) })}
-                className="w-full rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2.5 py-1.5 text-xs text-white outline-none"
-              />
-            </div>
+          <div>
+            <label className="mb-1 block text-[11px] text-[var(--text-secondary)]">Re-appear after (hours)</label>
+            <input
+              type="number"
+              value={config.dismiss_hours}
+              onChange={(e) => setConfig({ ...config, dismiss_hours: Math.max(1, parseInt(e.target.value) || 1) })}
+              className="w-full rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2.5 py-1.5 text-xs text-white outline-none"
+            />
           </div>
 
           <button

@@ -59,6 +59,18 @@ export default function AboutPage() {
             </svg>
             YouTube
           </a>
+          <a
+            href="mailto:eleabu18@gmail.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-white hover:border-[var(--text-secondary)] transition-colors"
+            aria-label="Email EduBrazil"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" style={{ fill: '#EA4335' }} aria-hidden="true">
+              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+            </svg>
+            Email
+          </a>
         </div>
       </section>
 
@@ -106,10 +118,6 @@ export default function AboutPage() {
           It&apos;s a small but telling example of what happens when an education-focused team and a
           systems-focused team combine forces: EduBrazil brought the on-the-ground academic
           expertise, and The Kehra brought the tools to organize and automate it at scale.
-        </p>
-        <p className="mt-4 text-xs text-[var(--text-muted)]">
-          © 2026 EduBrazil Hub + The Kehra — Connecting international students to Brazilian graduate
-          programs.
         </p>
       </section>
     </div>
