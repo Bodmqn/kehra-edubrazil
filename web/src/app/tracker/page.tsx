@@ -490,11 +490,11 @@ export default function TrackerPage() {
       {/* Email Alerts */}
       <div className="mt-8 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6">
         <h3 className="mb-2 text-sm font-semibold text-white">Get Email Reminders</h3>
+        <p className="mb-1 text-xs text-[var(--text-secondary)]">
+          If you don&apos;t see it in your inbox, check your spam folder.
+        </p>
         <p className="mb-4 text-xs text-[var(--text-secondary)]">
           Receive notifications when deadlines approach or programs update
-        </p>
-        <p className="-mt-3 mb-4 text-[10px] text-[var(--text-muted)]">
-          If you don&apos;t see it in your inbox, check your spam folder.
         </p>
         {emailStatus === 'success' ? (
           <div className="flex flex-col gap-2">
