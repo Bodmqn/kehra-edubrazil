@@ -13,6 +13,7 @@ import {
 import { daysUntil, slugify } from '@/lib/utils'
 import { universities } from '@/lib/data'
 import Link from 'next/link'
+import SearchInput from '@/components/SearchInput'
 import StatsBar from '@/components/tracker/StatsBar'
 import DeadlineTimeline from '@/components/tracker/DeadlineTimeline'
 import TrackerCard from '@/components/tracker/TrackerCard'
@@ -416,17 +417,8 @@ export default function TrackerPage() {
       {/* Search / Sort / Filter */}
       {programs.length > 0 && (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search programs, universities, notes..."
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] py-2 pl-8 pr-3 text-sm text-white placeholder-[var(--text-muted)] outline-none"
-            />
+          <div className="flex-1">
+            <SearchInput value={search} onChange={setSearch} placeholder="Search programs, universities, notes..." />
           </div>
           <select
             value={stageFilter}
@@ -459,12 +451,19 @@ export default function TrackerPage() {
               ? 'No programs tracked yet. Add your first program to get started!'
               : 'No programs match your filters.'}
           </p>
-          {programs.length === 0 && (
+          {programs.length === 0 ? (
             <button
               onClick={openAdd}
               className="mt-4 rounded-lg bg-[var(--bg-primary)] px-5 py-2 text-sm font-medium text-white hover:opacity-90"
             >
               Add Your First Program
+            </button>
+          ) : (
+            <button
+              onClick={() => { setSearch(''); setStageFilter('all'); setSortBy('deadline') }}
+              className="mt-4 rounded-lg border border-[var(--border)] px-5 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors"
+            >
+              Clear filters
             </button>
           )}
         </div>
