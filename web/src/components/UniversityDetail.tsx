@@ -205,13 +205,13 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--bg-primary)]/10 text-lg font-bold text-[var(--bg-primary)]">
                   {university.acronym}
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white sm:text-3xl">
+                <div className="text-left">
+                  <h1 className="text-2xl font-bold text-white sm:text-3xl break-words">
                     {university.name}
                   </h1>
                   <div className="mt-1 flex items-start justify-between gap-4 text-sm text-[var(--text-secondary)]">
                     <span className="flex items-center gap-3 flex-wrap">
-                      <span>{university.acronym} · {university.type} · {university.state}</span>
+                      <span className="whitespace-nowrap">{university.acronym} · {university.type} · {university.state}</span>
                       {university.school_url && (
                         <a
                           href={university.school_url}
