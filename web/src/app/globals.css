@@ -40,6 +40,10 @@
   color: #fff;
 }
 
+[data-theme="light"] .map-brazil-svg {
+  filter: invert(1);
+}
+
 @theme inline {
   --color-primary: var(--bg-primary);
   --color-accent: var(--bg-accent);
