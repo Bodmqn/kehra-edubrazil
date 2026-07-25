@@ -1,15 +1,17 @@
 'use client'
 
+import Link from 'next/link'
 import type { TrackerProgram } from '@/lib/trackerTypes'
-import { daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
+import { daysUntil, getDeadlineUrgency, formatDate, slugify } from '@/lib/utils'
 import { universities } from '@/lib/data'
-
-const uniAcronym = new Map(universities.map(u => [u.name, u.acronym]))
 
 interface DeadlineTimelineProps {
   programs: TrackerProgram[]
   onSelect: (program: TrackerProgram) => void
 }
+
+const uniAcronym = new Map(universities.map(u => [u.name, u.acronym]))
+const uniSlugMap = new Map(universities.map(u => [u.name, slugify(u.name)]))
 
 export default function DeadlineTimeline({ programs, onSelect }: DeadlineTimelineProps) {
   const upcoming = programs
@@ -37,9 +39,14 @@ export default function DeadlineTimeline({ programs, onSelect }: DeadlineTimelin
           const urgency = getDeadlineUrgency(days)
           const size = days <= 0 ? 'h-12' : days <= 14 ? 'h-10' : days <= 30 ? 'h-8' : 'h-6'
           return (
-            <button
+            <Link
               key={p.id}
-              onClick={() => onSelect(p)}
+              href={(() => {
+                const match = /^(.+?)(?:\s*\(.*\))?$/.exec(p.university)
+                const base = match?.[1]?.trim() ?? p.university
+                const slug = uniSlugMap.get(base)
+                return slug ? `/universities/${slug}` : '#'
+              })()}
               className={`flex shrink-0 flex-col items-center justify-end gap-1 rounded-lg px-2 pb-2 transition-all hover:opacity-80 ${size}`}
               style={{ backgroundColor: urgency.color + '15', minWidth: '72px' }}
               title={`${p.name} at ${p.university} — ${formatDate(p.deadline)}`}
@@ -53,7 +60,7 @@ export default function DeadlineTimeline({ programs, onSelect }: DeadlineTimelin
               >
                 {days <= 0 ? '⚠️' : `${days}d`}
               </span>
-            </button>
+            </Link>
           )
         })}
       </div>

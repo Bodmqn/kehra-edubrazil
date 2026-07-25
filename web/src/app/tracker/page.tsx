@@ -10,7 +10,9 @@ import {
   dismissReminder,
   dismissAllReminders,
 } from '@/lib/reminderUtils'
-import { daysUntil } from '@/lib/utils'
+import { daysUntil, slugify } from '@/lib/utils'
+import { universities } from '@/lib/data'
+import Link from 'next/link'
 import StatsBar from '@/components/tracker/StatsBar'
 import DeadlineTimeline from '@/components/tracker/DeadlineTimeline'
 import TrackerCard from '@/components/tracker/TrackerCard'
@@ -352,14 +354,19 @@ export default function TrackerPage() {
             {activeReminders.map((r) => {
               const { program: p } = r
               const days = daysUntil(p.deadline)
+              const pUniName = (() => {
+                const match = /^(.+?)(?:\s*\(.*\))?$/.exec(p.university)
+                const base = match?.[1]?.trim() ?? p.university
+                const found = universities.find((u) => u.name === base)
+                return found?.name ?? null
+              })()
+              const pUniSlug = pUniName ? slugify(pUniName) : null
+              const pLinkHref = pUniSlug ? `/universities/${pUniSlug}` : '#'
               return (
                 <div key={r.key} className="flex items-center justify-between rounded-lg bg-[var(--bg-card)] px-3 py-2">
-                  <button
-                    onClick={() => openEdit(p)}
-                    className="min-w-0 text-left"
-                  >
-                    <p className="text-xs font-medium text-white truncate">{p.name}</p>
-                    <p className="text-[10px] text-[var(--text-muted)]">
+                  <Link href={pLinkHref} className="min-w-0 text-left">
+                    <p className="text-xs font-medium text-white truncate hover:text-[var(--bg-primary)] transition-colors">{p.name}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
                       {p.university}
                       {days !== null && (
                         <span className="ml-1">
@@ -367,7 +374,7 @@ export default function TrackerPage() {
                         </span>
                       )}
                     </p>
-                  </button>
+                  </Link>
                   <button
                     onClick={() => {
                       dismissReminder(r.key)

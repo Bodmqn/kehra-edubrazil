@@ -11,6 +11,8 @@ import { availablePrograms as availableProgramsData } from '@/lib/available-prog
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import { STORAGE_KEY } from '@/lib/trackerTypes'
+import type { TrackerProgram } from '@/lib/trackerTypes'
+import TrackerModal from '@/components/tracker/TrackerModal'
 import { REGIONS } from '@/lib/constants'
 
 const regionColors: Record<string, string> = Object.fromEntries(
@@ -75,6 +77,9 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     }
   })
 
+  const [trackerModalProgram, setTrackerModalProgram] = useState<TrackerProgram | null>(null)
+  const [trackerModalOpen, setTrackerModalOpen] = useState(false)
+
   const handleTypeFilter: typeof setAvailTypeFilter = (type) => {
     setAvailTypeFilter(type)
     setAvailLevelFilter('all')
@@ -82,16 +87,16 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
   const programId = (acronym: string, name: string) => slugify(`${acronym}-${name}`)
 
-  const handleToggleSave = (pName: string, pLevel: string) => {
+  const openTrackerModal = (pName: string, pLevel: string) => {
     const id = programId(university?.acronym ?? '', pName)
     const stored = localStorage.getItem(STORAGE_KEY)
-    let list = stored ? JSON.parse(stored) : []
+    const list: TrackerProgram[] = stored ? JSON.parse(stored) : []
+    const existing = list.find((p) => p.id === id)
 
-    if (savedIds.has(id)) {
-      list = list.filter((p: { id: string }) => p.id !== id)
-      setSavedIds((prev) => { const next = new Set(prev); next.delete(id); return next })
+    if (existing) {
+      setTrackerModalProgram(existing)
     } else {
-      list.push({
+      setTrackerModalProgram({
         id,
         name: pName,
         university: `${university?.name ?? ''} (${university?.acronym ?? ''})`,
@@ -106,10 +111,36 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         source: 'manual',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      })
-      setSavedIds((prev) => { const next = new Set(prev); next.add(id); return next })
+      } as TrackerProgram)
     }
+    setTrackerModalOpen(true)
+  }
+
+  const handleTrackerSave = (program: TrackerProgram) => {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    let list: TrackerProgram[] = stored ? JSON.parse(stored) : []
+    const idx = list.findIndex((p) => p.id === program.id)
+
+    if (idx >= 0) {
+      list[idx] = { ...program, updatedAt: new Date().toISOString() }
+    } else {
+      list = [program, ...list]
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+    setSavedIds(new Set(list.map((p) => p.id)))
+    setTrackerModalOpen(false)
+    setTrackerModalProgram(null)
+  }
+
+  const handleQuickRemove = (pName: string) => {
+    const id = programId(university?.acronym ?? '', pName)
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return
+    const list: TrackerProgram[] = JSON.parse(stored)
+    const filtered = list.filter((p) => p.id !== id)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
+    setSavedIds(new Set(filtered.map((p) => p.id)))
   }
 
   const availableLevels = useMemo(() => {
@@ -396,17 +427,28 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                       </span>
                                     </div>
                                   </div>
-                                  <div className="shrink-0">
+                                  <div className="shrink-0 flex items-center gap-1">
                                     {savedIds.has(programId(university?.acronym ?? '', p.name)) ? (
-                                      <button
-                                        onClick={() => handleToggleSave(p.name, p.levelLabel)}
-                                        className="rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition-all hover:bg-red-500/20"
-                                      >
-                                        Remove
-                                      </button>
+                                      <>
+                                        <button
+                                          onClick={() => openTrackerModal(p.name, p.levelLabel)}
+                                          className="rounded-lg border border-[var(--bg-primary)]/40 bg-[var(--bg-primary)]/10 px-3 py-1.5 text-xs font-medium text-[var(--bg-primary)] transition-all hover:bg-[var(--bg-primary)]/20"
+                                        >
+                                          Edit in Tracker
+                                        </button>
+                                        <button
+                                          onClick={() => handleQuickRemove(p.name)}
+                                          className="rounded-lg border border-red-500/30 p-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-all"
+                                          title="Remove from tracker"
+                                        >
+                                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </button>
+                                      </>
                                     ) : (
                                       <button
-                                        onClick={() => handleToggleSave(p.name, p.levelLabel)}
+                                        onClick={() => openTrackerModal(p.name, p.levelLabel)}
                                         className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-all hover:border-[var(--bg-primary)]/30 hover:text-white"
                                       >
                                         Save to Tracker
@@ -552,6 +594,12 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
           )}
         </div>
       </section>
+      <TrackerModal
+        open={trackerModalOpen}
+        program={trackerModalProgram}
+        onSave={handleTrackerSave}
+        onClose={() => { setTrackerModalOpen(false); setTrackerModalProgram(null) }}
+      />
     </div>
   )
 }

@@ -1,8 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import { STAGES, PRIORITIES } from '@/lib/trackerTypes'
-import { daysUntil, getDeadlineUrgency, formatDate } from '@/lib/utils'
+import { daysUntil, getDeadlineUrgency, formatDate, slugify } from '@/lib/utils'
+import { universities } from '@/lib/data'
 import { getActiveReminders } from '@/lib/reminderUtils'
 
 interface TrackerCardProps {
@@ -23,6 +25,14 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
   const hasReminder = program.reminderDays.length > 0
   const isDue = activeReminders.length > 0
 
+  const uniName = (() => {
+    const match = /^(.+?)(?:\s*\(.*\))?$/.exec(program.university)
+    const base = match?.[1]?.trim() ?? program.university
+    const found = universities.find((u) => u.name === base)
+    return found?.name ?? null
+  })()
+  const uniSlug = uniName ? slugify(uniName) : null
+
   return (
     <div
       className={`group rounded-xl border p-4 transition-all ${
@@ -33,16 +43,28 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
     >
       {/* Header */}
       <div className="mb-2 flex items-start justify-between gap-2">
-        <button
-          onClick={() => onEdit(program)}
-          className="min-w-0 text-left"
-        >
-          <h4 className="text-sm font-semibold text-white truncate">{program.name}</h4>
-          <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate">
-            {program.university}
-            {program.level ? ` · ${program.level}` : ''}
-          </p>
-        </button>
+        <div className="min-w-0">
+          {uniSlug ? (
+            <Link href={`/universities/${uniSlug}`} className="block">
+              <h4 className="text-sm font-semibold text-white truncate hover:text-[var(--bg-primary)] transition-colors">{program.name}</h4>
+            </Link>
+          ) : (
+            <h4 className="text-sm font-semibold text-white truncate">{program.name}</h4>
+          )}
+          {uniSlug ? (
+            <Link href={`/universities/${uniSlug}`} className="block">
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate hover:text-[var(--text-secondary)] transition-colors">
+                {program.university}
+                {program.level ? ` · ${program.level}` : ''}
+              </p>
+            </Link>
+          ) : (
+            <p className="mt-0.5 text-[11px] text-[var(--text-muted)] truncate">
+              {program.university}
+              {program.level ? ` · ${program.level}` : ''}
+            </p>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           {hasReminder && (
             <span

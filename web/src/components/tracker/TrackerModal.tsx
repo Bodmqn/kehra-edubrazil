@@ -28,6 +28,13 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
   const [deadline, setDeadline] = useState(() => program?.deadline ?? '')
   const [level, setLevel] = useState(() => program?.level ?? '')
   const [programUrl, setProgramUrl] = useState(() => program?.programUrl ?? '')
+  const [urlSource, setUrlSource] = useState<'official' | 'open-selections' | 'custom' | null>(() => {
+    if (!program?.programUrl) return null
+    const uni = universities.find((u) => program.university.startsWith(u.name))
+    if (uni && program.programUrl === uni.school_url) return 'official'
+    if (uni && program.programUrl === uni.sigaa_url) return 'open-selections'
+    return 'custom'
+  })
   const [stage, setStage] = useState<TrackerStage>(() => program?.stage ?? 'saved')
   const [priority, setPriority] = useState<Priority>(() => program?.priority ?? 'medium')
   const [notes, setNotes] = useState(() => program?.notes ?? '')
@@ -59,6 +66,25 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
     return programs.map((p) => ({ value: p.name, label: p.name }))
   }, [university])
 
+  const uniData = useMemo(() => {
+    if (!university) return null
+    const match = /^(.+?)(?:\s*\(.*\))?$/.exec(university)
+    const baseName = match?.[1]?.trim() ?? university
+    return universities.find((u) => u.name === baseName) ?? null
+  }, [university])
+
+  const officialUrl = uniData?.school_url ?? null
+  const selectionsUrl = uniData?.sigaa_url ?? null
+
+  const handleUrlSource = useCallback((source: 'official' | 'open-selections' | 'custom') => {
+    setUrlSource(source)
+    if (source === 'official' && officialUrl) {
+      setProgramUrl(officialUrl)
+    } else if (source === 'open-selections' && selectionsUrl) {
+      setProgramUrl(selectionsUrl)
+    }
+  }, [officialUrl, selectionsUrl])
+
   const levelLabelToFormValue = useCallback((label: string): string => {
     const l = label.toLowerCase()
     if (l.includes('doutorado') && l.includes('mestrado')) return 'Ambos'
@@ -68,6 +94,8 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
   }, [])
 
   const handleUniversitySelect = useCallback((selected: string) => {
+    setUrlSource(null)
+    setProgramUrl('')
     const slug = slugify(selected)
     const programs = allProgramsBySlug[slug]
     if (programs && programs.length === 1) {
@@ -172,7 +200,7 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
 
   if (!open) return null
 
-  const isExistingEntry = !!(program && program.id)
+  const isExistingEntry = !!(program && program.createdAt)
   const modalTitle = isExistingEntry
     ? program.source === 'scholarship' ? 'Edit Scholarship' : 'Edit Program'
     : program?.source === 'scholarship' ? 'Add Scholarship' : 'Add Program'
@@ -271,17 +299,66 @@ export default function TrackerModal({ open, program, onSave, onClose }: Tracker
 
           {/* Program URL */}
           <div>
-            <label htmlFor={`${formId}-url`} className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
+            <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">
               Program URL
             </label>
-            <input
-              id={`${formId}-url`}
-              type="url"
-              value={programUrl}
-              onChange={(e) => setProgramUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)]"
-            />
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {officialUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleUrlSource('official')}
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                    urlSource === 'official'
+                      ? 'border-[var(--bg-primary)] bg-[var(--bg-primary)]/20 text-[var(--bg-primary)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                  }`}
+                >
+                  Official website ↗
+                </button>
+              )}
+              {selectionsUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleUrlSource('open-selections')}
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                    urlSource === 'open-selections'
+                      ? 'border-[var(--success)] bg-[var(--success)]/20 text-[var(--success)]'
+                      : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                  }`}
+                >
+                  View open selections ↗
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleUrlSource('custom')}
+                className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                  urlSource === 'custom'
+                    ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/20 text-[var(--bg-accent)]'
+                    : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Custom URL
+              </button>
+            </div>
+            {urlSource === 'custom' && (
+              <input
+                id={`${formId}-url`}
+                type="url"
+                value={programUrl}
+                onChange={(e) => setProgramUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] outline-none focus:border-[var(--bg-primary)]"
+              />
+            )}
+            {urlSource && urlSource !== 'custom' && programUrl && (
+              <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                URL auto-populated from{' '}
+                <span className={urlSource === 'official' ? 'text-[var(--bg-primary)]' : 'text-[var(--success)]'}>
+                  {urlSource === 'official' ? 'official website' : 'open selections'}
+                </span>
+              </p>
+            )}
           </div>
 
           {/* Stage + Priority row */}
