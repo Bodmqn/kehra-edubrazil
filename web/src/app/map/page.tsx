@@ -130,6 +130,18 @@ export default function MapPage() {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="mb-4 flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#E53935' }} />
+          Federal University
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#26A69A' }} />
+          State University
+        </span>
+      </div>
+
       {/* Map */}
       <div className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
         <div className="relative flex aspect-[1000/912] w-full items-center justify-center bg-gradient-to-br from-[var(--bg-primary)]/5 to-[var(--bg-secondary)]/5">
@@ -162,7 +174,7 @@ export default function MapPage() {
                   }`}
                   style={{
                     backgroundColor:
-                      u.type === 'Federal' ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                      u.type === 'Federal' ? '#E53935' : '#26A69A',
                   }}
                 />
 
