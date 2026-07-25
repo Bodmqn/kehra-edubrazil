@@ -493,6 +493,9 @@ export default function TrackerPage() {
         <p className="mb-4 text-xs text-[var(--text-secondary)]">
           Receive notifications when deadlines approach or programs update
         </p>
+        <p className="-mt-3 mb-4 text-[10px] text-[var(--text-muted)]">
+          If you don&apos;t see it in your inbox, check your spam folder.
+        </p>
         {emailStatus === 'success' ? (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-[var(--success)]">
