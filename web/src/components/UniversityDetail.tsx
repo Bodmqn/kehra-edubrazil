@@ -595,6 +595,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         </div>
       </section>
       <TrackerModal
+        key={trackerModalProgram?.id ?? 'closed'}
         open={trackerModalOpen}
         program={trackerModalProgram}
         onSave={handleTrackerSave}
