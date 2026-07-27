@@ -50,14 +50,13 @@ const regionSvgCoords: Record<string, { x: number; y: number }> = {
   Sul: { x: 492.97, y: 716.77 },
 }
 
-const SHOW_LABELS_THRESHOLD = 15
-
 export default function MapPage() {
   usePageMeta('University Map', 'Explore Brazilian universities across all five regions')
   const [selectedRegion, setSelectedRegion] = useState<Region | ''>('')
   const [selectedType, setSelectedType] = useState<UniversityType | ''>('')
   const [search, setSearch] = useState('')
   const [hoveredUni, setHoveredUni] = useState<string | null>(null)
+  const [showLabels, setShowLabels] = useState(false)
 
   const filtered = useMemo(() => {
     return universities.filter((u) => {
@@ -72,7 +71,7 @@ export default function MapPage() {
     })
   }, [selectedRegion, selectedType, search])
 
-  const showAutoLabels = filtered.length <= SHOW_LABELS_THRESHOLD && filtered.length > 0
+  const showLabelsActive = showLabels && filtered.length > 0
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -140,6 +139,17 @@ export default function MapPage() {
           <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#26A69A' }} />
           State University
         </span>
+        <button
+          onClick={() => setShowLabels(!showLabels)}
+          className={`ml-auto rounded-md border px-2 py-1 text-xs font-medium transition-all ${
+            showLabels
+              ? 'border-white bg-white/10 text-white'
+              : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-white'
+          }`}
+          aria-pressed={showLabels}
+        >
+          {showLabels ? 'Hide Acronyms' : 'Show Acronyms'}
+        </button>
       </div>
 
       {/* Map */}
@@ -186,7 +196,7 @@ export default function MapPage() {
                 )}
 
                 {/* Auto-label — acronym when filtered */}
-                {!isHovered && showAutoLabels && (
+                {!isHovered && showLabelsActive && (
                   <span className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] text-[var(--text-muted)] opacity-70 pointer-events-none">
                     {u.acronym}
                   </span>
