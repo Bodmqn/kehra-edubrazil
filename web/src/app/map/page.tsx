@@ -73,6 +73,32 @@ export default function MapPage() {
 
   const showLabelsActive = showLabels && filtered.length > 0
 
+  const universityOffsets = useMemo(() => {
+    const offsets: Record<string, { x: number; y: number }> = {}
+    const groups: Record<string, typeof universities> = {}
+
+    for (const u of filtered) {
+      if (!groups[u.state]) groups[u.state] = []
+      groups[u.state].push(u)
+    }
+
+    for (const unis of Object.values(groups)) {
+      const count = unis.length
+      if (count <= 1) continue
+      const radius = Math.max(12, Math.min(28, 8 + count * 2))
+      const step = (2 * Math.PI) / count
+      unis.forEach((u, i) => {
+        const angle = i * step
+        offsets[u.id] = {
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+        }
+      })
+    }
+
+    return offsets
+  }, [filtered])
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
@@ -165,6 +191,9 @@ export default function MapPage() {
           {filtered.map((u) => {
             const coord = stateSvgCoords[u.state] || regionSvgCoords[u.region]
             if (!coord) return null
+            const offset = universityOffsets[u.id]
+            const px = coord.x + (offset?.x ?? 0)
+            const py = coord.y + (offset?.y ?? 0)
             const isHovered = hoveredUni === u.id
 
             return (
@@ -172,7 +201,7 @@ export default function MapPage() {
                 key={u.id}
                 href={`/universities/${slugify(u.name)}`}
                 className="absolute z-10"
-                style={{ left: `${(coord.x / 1000) * 100}%`, top: `${(coord.y / 912) * 100}%` }}
+                style={{ left: `${(px / 1000) * 100}%`, top: `${(py / 912) * 100}%` }}
                 aria-label={u.name}
                 onMouseEnter={() => setHoveredUni(u.id)}
                 onMouseLeave={() => setHoveredUni(null)}
