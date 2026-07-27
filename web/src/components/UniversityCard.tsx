@@ -19,15 +19,19 @@ const regionColors: Record<string, string> = Object.fromEntries(
 )
 
 export default function UniversityCard({ university, programCount }: UniversityCardProps) {
-  const [inTracker] = useState(() => {
-    if (typeof window === 'undefined') return false
+  const [savedInfo] = useState(() => {
+    if (typeof window === 'undefined') return { saved: false, reminder: false }
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return false
+      if (!raw) return { saved: false, reminder: false }
       const programs: TrackerProgram[] = JSON.parse(raw)
-      return programs.some((p) => p.university === university.name)
+      const matching = programs.filter((p) => p.university.startsWith(university.name))
+      return {
+        saved: matching.length > 0,
+        reminder: matching.some((p) => p.reminderDays.length > 0),
+      }
     } catch {
-      return false
+      return { saved: false, reminder: false }
     }
   })
 
@@ -41,8 +45,11 @@ export default function UniversityCard({ university, programCount }: UniversityC
           {university.acronym}
         </div>
         <div className="flex items-center gap-1.5">
-          {inTracker && (
-            <span className="text-xs" title="You have saved programs from this university">🔔</span>
+          {savedInfo.saved && (
+            <span className="text-xs" title="Saved to tracker">💾</span>
+          )}
+          {savedInfo.reminder && (
+            <span className="text-xs" title="Has reminder set">🔔</span>
           )}
           <Badge variant="region" color={regionColors[university.region]}>
             {university.region}

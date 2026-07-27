@@ -77,6 +77,18 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     }
   })
 
+  const [savedReminderIds, setSavedReminderIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) return new Set()
+      const programs: TrackerProgram[] = JSON.parse(stored)
+      return new Set(programs.filter((p) => p.reminderDays.length > 0).map((p) => p.id))
+    } catch {
+      return new Set()
+    }
+  })
+
   const [trackerModalProgram, setTrackerModalProgram] = useState<TrackerProgram | null>(null)
   const [trackerModalOpen, setTrackerModalOpen] = useState(false)
 
@@ -129,6 +141,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
     setSavedIds(new Set(list.map((p) => p.id)))
+    setSavedReminderIds(new Set(list.filter((p) => p.reminderDays.length > 0).map((p) => p.id)))
     setTrackerModalOpen(false)
     setTrackerModalProgram(null)
   }
@@ -141,6 +154,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     const filtered = list.filter((p) => p.id !== id)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
     setSavedIds(new Set(filtered.map((p) => p.id)))
+    setSavedReminderIds(new Set(filtered.filter((p) => p.reminderDays.length > 0).map((p) => p.id)))
   }
 
   const availableLevels = useMemo(() => {
@@ -392,6 +406,12 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                     CAPES {p.capesScore}
                                   </span>
                                 )}
+                                {savedIds.has(programId(university?.acronym ?? '', p.name)) && (
+                                  <span className="shrink-0 text-xs" title="Saved to tracker">💾</span>
+                                )}
+                                {savedReminderIds.has(programId(university?.acronym ?? '', p.name)) && (
+                                  <span className="shrink-0 text-xs" title="Has reminder set">🔔</span>
+                                )}
                               </div>
                               <svg
                                 className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -434,7 +454,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                           onClick={() => openTrackerModal(p.name, p.levelLabel)}
                                           className="rounded-lg border border-[var(--bg-primary)]/40 bg-[var(--bg-primary)]/10 px-3 py-1.5 text-xs font-medium text-[var(--bg-primary)] transition-all hover:bg-[var(--bg-primary)]/20"
                                         >
-                                          Edit in Tracker
+                                          💾 Edit
                                         </button>
                                         <button
                                           onClick={() => handleQuickRemove(p.name)}
@@ -451,7 +471,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                         onClick={() => openTrackerModal(p.name, p.levelLabel)}
                                         className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-all hover:border-[var(--bg-primary)]/30 hover:text-white"
                                       >
-                                        Save to Tracker
+                                        💾 Save
                                       </button>
                                     )}
                                   </div>
