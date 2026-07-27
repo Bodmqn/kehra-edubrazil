@@ -97,10 +97,10 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     setAvailLevelFilter('all')
   }
 
-  const programId = (acronym: string, name: string) => slugify(`${acronym}-${name}`)
+  const programId = (acronym: string, name: string, level: string) => slugify(`${acronym}-${name}-${level}`)
 
   const openTrackerModal = (pName: string, pLevel: string) => {
-    const id = programId(university?.acronym ?? '', pName)
+    const id = programId(university?.acronym ?? '', pName, pLevel)
     const stored = localStorage.getItem(STORAGE_KEY)
     const list: TrackerProgram[] = stored ? JSON.parse(stored) : []
     const existing = list.find((p) => p.id === id)
@@ -146,8 +146,8 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     setTrackerModalProgram(null)
   }
 
-  const handleQuickRemove = (pName: string) => {
-    const id = programId(university?.acronym ?? '', pName)
+  const handleQuickRemove = (pName: string, pLevel: string) => {
+    const id = programId(university?.acronym ?? '', pName, pLevel)
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return
     const list: TrackerProgram[] = JSON.parse(stored)
@@ -406,10 +406,10 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                     CAPES {p.capesScore}
                                   </span>
                                 )}
-                                {savedIds.has(programId(university?.acronym ?? '', p.name)) && (
+                                {savedIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) && (
                                   <span className="shrink-0 text-xs" title="Saved to tracker">💾</span>
                                 )}
-                                {savedReminderIds.has(programId(university?.acronym ?? '', p.name)) && (
+                                {savedReminderIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) && (
                                   <span className="shrink-0 text-xs" title="Has reminder set">🔔</span>
                                 )}
                               </div>
@@ -448,7 +448,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                     </div>
                                   </div>
                                   <div className="shrink-0 flex items-center gap-1">
-                                    {savedIds.has(programId(university?.acronym ?? '', p.name)) ? (
+                                    {savedIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) ? (
                                       <>
                                         <button
                                           onClick={() => openTrackerModal(p.name, p.levelLabel)}
@@ -457,7 +457,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                           💾 Edit
                                         </button>
                                         <button
-                                          onClick={() => handleQuickRemove(p.name)}
+                                          onClick={() => handleQuickRemove(p.name, p.levelLabel)}
                                           className="rounded-lg border border-red-500/30 p-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-all"
                                           title="Remove from tracker"
                                         >
