@@ -102,7 +102,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         university: `${university?.name ?? ''} (${university?.acronym ?? ''})`,
         deadline: null,
         level: pLevel,
-        programUrl: null,
+        programUrl: university?.school_url ?? university?.sigaa_url ?? null,
         stage: 'saved',
         priority: 'medium',
         notes: '',
