@@ -4,4 +4,4 @@
 create policy "Admins can view all tracker programs"
   on user_tracker_programs
   for select
-  using (auth.email() in (select email from admin_users));
+  using (auth.jwt() ->> 'email' in (select email from admin_users));
