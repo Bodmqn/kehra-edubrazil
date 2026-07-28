@@ -3,17 +3,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import SearchInput from '@/components/SearchInput'
-import UniversityModal from '@/components/admin/UniversityModal'
 import type { University } from '@/lib/types'
 
 export default function AdminUniversitiesPage() {
   const [universities, setUniversities] = useState<University[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editSchoolUrl, setEditSchoolUrl] = useState('')
+  const [editSigaaUrl, setEditSigaaUrl] = useState('')
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  const [modalUniversity, setModalUniversity] = useState<University | null>(null)
-  const [modalTab, setModalTab] = useState<'details' | 'programs' | 'urls'>('programs')
 
   useEffect(() => {
     async function fetch() {
@@ -45,9 +45,45 @@ export default function AdminUniversitiesPage() {
     )
   }, [universities, search])
 
-  const openModal = (u: University, tab: 'details' | 'programs' | 'urls') => {
-    setModalTab(tab)
-    setModalUniversity(u)
+  const startEdit = (u: University) => {
+    setEditingId(u.id)
+    setEditSchoolUrl(u.school_url ?? '')
+    setEditSigaaUrl(u.sigaa_url ?? '')
+    setMessage(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setMessage(null)
+  }
+
+  const saveEdit = async (id: string) => {
+    setSaving(true)
+    setMessage(null)
+    try {
+      const { error } = await supabase
+        .from('universities')
+        .update({
+          school_url: editSchoolUrl || null,
+          sigaa_url: editSigaaUrl || null,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      setUniversities((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? { ...u, school_url: editSchoolUrl || null, sigaa_url: editSigaaUrl || null }
+            : u
+        )
+      )
+      setEditingId(null)
+      setMessage({ type: 'success', text: 'URLs updated successfully.' })
+    } catch (e) {
+      setMessage({ type: 'error', text: e instanceof Error ? e.message : 'Failed to update URLs.' })
+    }
+    setSaving(false)
   }
 
   if (loading) {
@@ -58,7 +94,7 @@ export default function AdminUniversitiesPage() {
     <div>
       <h1 className="mb-1 text-xl font-bold text-white">Universities</h1>
       <p className="mb-4 text-xs text-[var(--text-muted)]">
-        Click a university to manage its programs, details, and URLs.
+        Edit school_url and sigaa_url for any university.
       </p>
 
       <div className="mb-4">
@@ -98,18 +134,21 @@ export default function AdminUniversitiesPage() {
               {filtered.map((u) => (
                 <tr key={u.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-card)]/50">
                   <td className="px-3 py-2.5 text-[var(--text-muted)]">{u.sno}</td>
-                  <td className="px-3 py-2.5">
-                    <button
-                      onClick={() => openModal(u, 'programs')}
-                      className="text-left text-white hover:text-[var(--bg-primary)] transition-colors"
-                    >
-                      {u.name}
-                    </button>
+                  <td className="px-3 py-2.5 text-white">
+                    {u.name}
                     <span className="ml-1 text-[var(--text-muted)]">({u.acronym})</span>
                   </td>
                   <td className="px-3 py-2.5 text-[var(--text-muted)]">{u.state}</td>
                   <td className="max-w-[180px] truncate px-3 py-2.5">
-                    {u.school_url ? (
+                    {editingId === u.id ? (
+                      <input
+                        type="text"
+                        value={editSchoolUrl}
+                        onChange={(e) => setEditSchoolUrl(e.target.value)}
+                        className="w-full rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2 py-1 text-xs text-white outline-none"
+                        placeholder="https://…"
+                      />
+                    ) : u.school_url ? (
                       <a
                         href={u.school_url}
                         target="_blank"
@@ -123,7 +162,15 @@ export default function AdminUniversitiesPage() {
                     )}
                   </td>
                   <td className="max-w-[180px] truncate px-3 py-2.5">
-                    {u.sigaa_url ? (
+                    {editingId === u.id ? (
+                      <input
+                        type="text"
+                        value={editSigaaUrl}
+                        onChange={(e) => setEditSigaaUrl(e.target.value)}
+                        className="w-full rounded border border-[var(--border)] bg-[var(--bg-dark)] px-2 py-1 text-xs text-white outline-none"
+                        placeholder="https://…"
+                      />
+                    ) : u.sigaa_url ? (
                       <a
                         href={u.sigaa_url}
                         target="_blank"
@@ -136,25 +183,32 @@ export default function AdminUniversitiesPage() {
                       <span className="text-[var(--text-muted)]">—</span>
                     )}
                   </td>
-                  <td className="flex flex-wrap gap-1 px-3 py-2.5">
-                    <button
-                      onClick={() => openModal(u, 'details')}
-                      className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--bg-primary)] hover:text-white"
-                    >
-                      Details
-                    </button>
-                    <button
-                      onClick={() => openModal(u, 'programs')}
-                      className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--bg-accent)] hover:text-white"
-                    >
-                      Programs
-                    </button>
-                    <button
-                      onClick={() => openModal(u, 'urls')}
-                      className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] hover:text-white"
-                    >
-                      URLs
-                    </button>
+                  <td className="flex gap-1 px-3 py-2.5">
+                    {editingId === u.id ? (
+                      <>
+                        <button
+                          onClick={() => saveEdit(u.id)}
+                          disabled={saving}
+                          className="rounded bg-[var(--bg-primary)] px-2 py-1 text-[10px] text-white disabled:opacity-50"
+                          style={{ color: 'white' }}
+                        >
+                          {saving ? 'Saving…' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--text-secondary)]"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(u)}
+                        className="rounded border border-[var(--border)] px-2 py-1 text-[10px] text-[var(--text-secondary)] hover:text-white"
+                      >
+                        Edit URLs
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -162,13 +216,6 @@ export default function AdminUniversitiesPage() {
           </table>
         </div>
       )}
-
-      <UniversityModal
-        open={!!modalUniversity}
-        university={modalUniversity}
-        initialTab={modalTab}
-        onClose={() => setModalUniversity(null)}
-      />
     </div>
   )
 }
