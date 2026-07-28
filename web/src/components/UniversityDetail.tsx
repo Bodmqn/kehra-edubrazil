@@ -10,9 +10,10 @@ import { COST_OF_LIVING } from '@/lib/costOfLiving'
 import { availablePrograms as availableProgramsData } from '@/lib/available-programs'
 import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
-import { STORAGE_KEY } from '@/lib/trackerTypes'
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import TrackerModal from '@/components/tracker/TrackerModal'
+import { useUser } from '@/lib/AuthProvider'
+import { getPrograms, getSavedInfo, saveProgram, deleteProgram } from '@/lib/trackerService'
 import { REGIONS } from '@/lib/constants'
 
 const regionColors: Record<string, string> = Object.fromEntries(
@@ -37,6 +38,7 @@ interface UniversityDetailProps {
 }
 
 export default function UniversityDetail({ slug, fallbackUniversity }: UniversityDetailProps) {
+  const user = useUser()
   const { universities: liveUniversities } = useUniversities()
   const liveUniversity = liveUniversities.find((u) => slugify(u.name) === slug)
   const university = liveUniversity ?? fallbackUniversity
@@ -66,28 +68,18 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
   const [availTypeFilter, setAvailTypeFilter] = useState<'all' | 'Acadêmico' | 'Profissional'>('all')
   const [availLevelFilter, setAvailLevelFilter] = useState<string>('all')
   const [availSearch, setAvailSearch] = useState('')
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) return new Set()
-      return new Set((JSON.parse(stored) as { id: string }[]).map((p) => p.id))
-    } catch {
-      return new Set()
-    }
-  })
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  const [savedReminderIds, setSavedReminderIds] = useState<Set<string>>(new Set())
+  const [savedInfoLoaded, setSavedInfoLoaded] = useState(false)
 
-  const [savedReminderIds, setSavedReminderIds] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set()
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (!stored) return new Set()
-      const programs: TrackerProgram[] = JSON.parse(stored)
-      return new Set(programs.filter((p) => p.reminderDays.length > 0).map((p) => p.id))
-    } catch {
-      return new Set()
-    }
-  })
+  // Load saved info from Supabase or localStorage
+  useEffect(() => {
+    getSavedInfo().then((info) => {
+      setSavedIds(info.savedIds)
+      setSavedReminderIds(info.savedReminderIds)
+      setSavedInfoLoaded(true)
+    })
+  }, [user])
 
   const [trackerModalProgram, setTrackerModalProgram] = useState<TrackerProgram | null>(null)
   const [trackerModalOpen, setTrackerModalOpen] = useState(false)
@@ -99,14 +91,13 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
   const programId = (acronym: string, name: string, level: string) => slugify(`${acronym}-${name}-${level}`)
 
-  const openTrackerModal = (pName: string, pLevel: string) => {
+  const openTrackerModal = async (pName: string, pLevel: string) => {
     const id = programId(university?.acronym ?? '', pName, pLevel)
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const list: TrackerProgram[] = stored ? JSON.parse(stored) : []
-    const existing = list.find((p) => p.id === id)
 
-    if (existing) {
-      setTrackerModalProgram(existing)
+    if (savedIds.has(id)) {
+      const all = await getPrograms()
+      const existing = all.find((p) => p.id === id)
+      setTrackerModalProgram(existing ?? null)
     } else {
       setTrackerModalProgram({
         id,
@@ -128,33 +119,22 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
     setTrackerModalOpen(true)
   }
 
-  const handleTrackerSave = (program: TrackerProgram) => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    let list: TrackerProgram[] = stored ? JSON.parse(stored) : []
-    const idx = list.findIndex((p) => p.id === program.id)
-
-    if (idx >= 0) {
-      list[idx] = { ...program, updatedAt: new Date().toISOString() }
-    } else {
-      list = [program, ...list]
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-    setSavedIds(new Set(list.map((p) => p.id)))
-    setSavedReminderIds(new Set(list.filter((p) => p.reminderDays.length > 0).map((p) => p.id)))
+  const handleTrackerSave = async (program: TrackerProgram) => {
+    await saveProgram(program)
+    const info = await getSavedInfo()
+    setSavedIds(info.savedIds)
+    setSavedReminderIds(info.savedReminderIds)
     setTrackerModalOpen(false)
     setTrackerModalProgram(null)
   }
 
-  const handleQuickRemove = (pName: string, pLevel: string) => {
+  const handleQuickRemove = async (pName: string, pLevel: string) => {
     const id = programId(university?.acronym ?? '', pName, pLevel)
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return
-    const list: TrackerProgram[] = JSON.parse(stored)
-    const filtered = list.filter((p) => p.id !== id)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
-    setSavedIds(new Set(filtered.map((p) => p.id)))
-    setSavedReminderIds(new Set(filtered.filter((p) => p.reminderDays.length > 0).map((p) => p.id)))
+    if (!savedIds.has(id)) return
+    await deleteProgram(id)
+    const info = await getSavedInfo()
+    setSavedIds(info.savedIds)
+    setSavedReminderIds(info.savedReminderIds)
   }
 
   const availableLevels = useMemo(() => {

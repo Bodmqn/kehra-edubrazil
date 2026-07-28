@@ -18,9 +18,16 @@ import StatsBar from '@/components/tracker/StatsBar'
 import DeadlineTimeline from '@/components/tracker/DeadlineTimeline'
 import TrackerCard from '@/components/tracker/TrackerCard'
 import TrackerModal from '@/components/tracker/TrackerModal'
+import LoginModal from '@/components/auth/LoginModal'
+import { useAuth } from '@/lib/AuthProvider'
+import { getPrograms, saveProgram, deleteProgram, migrateLocalToSupabase } from '@/lib/trackerService'
 
 export default function TrackerPage() {
   usePageMeta('My Tracker', 'Track your graduate program applications and deadlines')
+
+  const { user, loading: authLoading, signIn } = useAuth()
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
 
   const [programs, setPrograms] = useState<TrackerProgram[]>(() => {
     if (typeof window !== 'undefined') {
@@ -50,6 +57,28 @@ export default function TrackerPage() {
     }
     return []
   })
+
+  // On mount or auth change: load from Supabase if authenticated
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      setDataLoading(false)
+      return
+    }
+    ;(async () => {
+      try {
+        await migrateLocalToSupabase()
+        const remote = await getPrograms()
+        if (remote.length > 0) {
+          setPrograms(remote)
+        }
+      } catch (e) {
+        console.error('Failed to load from Supabase:', e)
+      }
+      setDataLoading(false)
+    })()
+  }, [user, authLoading])
+
   const mounted = useSyncExternalStore(() => () => {}, () => true, () => true)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'deadline' | 'name' | 'priority' | 'updated'>('deadline')
@@ -75,8 +104,13 @@ export default function TrackerPage() {
   const [formKey, setFormKey] = useState(0)
   const [syncError, setSyncError] = useState('')
 
-  const saveToStorage = (updated: TrackerProgram[]) => {
+  const saveToStorage = async (updated: TrackerProgram[]) => {
     setPrograms(updated)
+    if (user) {
+      // If authenticated, we save individually after each mutation
+      // This is called after handleSave/handleDelete which already use trackerService
+      return
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
   }
 
@@ -113,16 +147,21 @@ export default function TrackerPage() {
     [subscriptionToken]
   )
 
-  const handleSave = (program: TrackerProgram) => {
+  const handleSave = async (program: TrackerProgram) => {
     const idx = programs.findIndex((p) => p.id === program.id)
     let updated: TrackerProgram[]
+    const savedProg = { ...program, updatedAt: new Date().toISOString() }
     if (idx >= 0) {
       updated = [...programs]
-      updated[idx] = { ...program, updatedAt: new Date().toISOString() }
+      updated[idx] = savedProg
     } else {
-      updated = [program, ...programs]
+      updated = [savedProg, ...programs]
     }
-    saveToStorage(updated)
+    setPrograms(updated)
+    if (!user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    }
+    await saveProgram(savedProg)
     syncReminderToServer(program)
     setModalOpen(false)
     setEditing(null)
@@ -130,7 +169,11 @@ export default function TrackerPage() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Remove this program from your tracker?')) return
-    saveToStorage(programs.filter((p) => p.id !== id))
+    setPrograms(programs.filter((p) => p.id !== id))
+    if (!user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(programs.filter((p) => p.id !== id)))
+    }
+    await deleteProgram(id)
     if (subscriptionToken) {
       try {
         const resp = await fetch('/.netlify/functions/sync-reminders', {
@@ -148,10 +191,16 @@ export default function TrackerPage() {
     }
   }
 
-  const handleStageChange = (id: string, stage: TrackerProgram['stage']) => {
-    saveToStorage(
-      programs.map((p) => (p.id === id ? { ...p, stage, updatedAt: new Date().toISOString() } : p))
+  const handleStageChange = async (id: string, stage: TrackerProgram['stage']) => {
+    const updated = programs.map((p) =>
+      p.id === id ? { ...p, stage, updatedAt: new Date().toISOString() } : p
     )
+    setPrograms(updated)
+    if (!user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    }
+    const target = updated.find((p) => p.id === id)
+    if (target) await saveProgram(target)
   }
 
   const openEdit = (program: TrackerProgram) => {
@@ -322,6 +371,34 @@ export default function TrackerPage() {
           </button>
         </div>
       </div>
+
+      {/* Login Banner */}
+      {!authLoading && !user && (
+        <div className="mb-4 rounded-xl border border-[var(--bg-accent)]/30 bg-[var(--bg-accent)]/10 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Sync your tracker across devices
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                Sign in with your email to access your programs on any device.
+              </p>
+            </div>
+            <button
+              onClick={() => setLoginModalOpen(true)}
+              className="shrink-0 rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90"
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      )}
+
+      {dataLoading && (
+        <div className="mb-4 flex items-center justify-center py-8">
+          <p className="text-sm text-[var(--text-muted)]">Loading your programs…</p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="mb-4">
@@ -548,13 +625,18 @@ export default function TrackerPage() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       <TrackerModal
         key={editing?.id ?? formKey}
         open={modalOpen}
         program={editing}
         onSave={handleSave}
         onClose={() => { setModalOpen(false); setEditing(null) }}
+      />
+      <LoginModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onLogin={signIn}
       />
     </div>
   )

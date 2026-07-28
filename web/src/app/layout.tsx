@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import SkipLink from '@/components/SkipLink'
 import GeneralNoticeBar from '@/components/GeneralNoticeBar'
 import ThemeProvider from '@/components/ThemeProvider'
+import { AuthProvider } from '@/lib/AuthProvider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -52,13 +53,15 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[var(--bg-dark)] font-sans" style={{ color: 'var(--text-primary)' }}>
         <ThemeProvider>
-          <SkipLink />
-          <Navbar />
-          <GeneralNoticeBar />
-          <main id="main-content" className="pt-16" tabIndex={-1}>
-            {children}
-          </main>
-          <Footer />
+          <AuthProvider>
+            <SkipLink />
+            <Navbar />
+            <GeneralNoticeBar />
+            <main id="main-content" className="pt-16" tabIndex={-1}>
+              {children}
+            </main>
+            <Footer />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

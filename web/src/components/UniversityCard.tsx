@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { University } from '@/lib/types'
 import { slugify } from '@/lib/utils'
-import type { TrackerProgram } from '@/lib/trackerTypes'
-import { STORAGE_KEY } from '@/lib/trackerTypes'
 import { REGIONS } from '@/lib/constants'
+import { getPrograms } from '@/lib/trackerService'
 import Badge from './Badge'
 
 interface UniversityCardProps {
@@ -19,21 +18,17 @@ const regionColors: Record<string, string> = Object.fromEntries(
 )
 
 export default function UniversityCard({ university, programCount }: UniversityCardProps) {
-  const [savedInfo] = useState(() => {
-    if (typeof window === 'undefined') return { saved: false, reminder: false }
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return { saved: false, reminder: false }
-      const programs: TrackerProgram[] = JSON.parse(raw)
+  const [savedInfo, setSavedInfo] = useState({ saved: false, reminder: false })
+
+  useEffect(() => {
+    getPrograms().then((programs) => {
       const matching = programs.filter((p) => p.university.startsWith(university.name))
-      return {
+      setSavedInfo({
         saved: matching.length > 0,
         reminder: matching.some((p) => p.reminderDays.length > 0),
-      }
-    } catch {
-      return { saved: false, reminder: false }
-    }
-  })
+      })
+    })
+  }, [university.name])
 
   return (
     <Link
