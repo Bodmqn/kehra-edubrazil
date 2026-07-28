@@ -34,7 +34,7 @@ export default function UpdatePasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
         setStatus('ready')
       }
@@ -43,13 +43,10 @@ export default function UpdatePasswordPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setStatus('ready')
-      } else {
-        setTimeout(() => {
-          setStatus('error')
-          setErrorMsg('Invalid or expired reset link. Please request a new one.')
-        }, 2000)
       }
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {

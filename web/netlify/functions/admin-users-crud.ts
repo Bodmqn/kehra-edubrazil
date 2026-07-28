@@ -57,5 +57,29 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     return { statusCode: 200, headers, body: JSON.stringify({ success: true }) }
   }
 
+  if (event.httpMethod === 'PATCH') {
+    const userId = event.queryStringParameters?.id
+    if (!userId) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing user id' }) }
+    }
+
+    let body: { password?: string }
+    try {
+      body = JSON.parse(event.body ?? '{}')
+    } catch {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body' }) }
+    }
+
+    if (!body.password || body.password.length < 6) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Password must be at least 6 characters' }) }
+    }
+
+    const { error } = await supabase.auth.admin.updateUserById(userId, { password: body.password })
+    if (error) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) }
+  }
+
   return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 }
