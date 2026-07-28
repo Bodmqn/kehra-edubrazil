@@ -5,12 +5,16 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NAV_ITEMS } from '@/lib/constants'
 import { useTheme } from '@/components/ThemeProvider'
+import { useAuth } from '@/lib/AuthProvider'
+import LoginModal from '@/components/auth/LoginModal'
 
 export default function Navbar() {
   const pathname = usePathname()
   const isAdmin = pathname.startsWith('/admin')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
+  const { user, loading: authLoading, signIn, signOut } = useAuth()
 
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
 
@@ -108,6 +112,27 @@ export default function Navbar() {
             })}
           </nav>
 
+          {!authLoading && (
+            user ? (
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="text-xs text-[var(--text-muted)] max-w-[120px] truncate">{user.email}</span>
+                <button
+                  onClick={signOut}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--bg-accent)]/30 bg-[var(--bg-accent)]/10 px-3 py-1.5 text-xs text-[var(--bg-accent)] hover:bg-[var(--bg-accent)]/20 transition-colors"
+              >
+                Sign In
+              </button>
+            )
+          )}
+
           <button
             type="button"
             onClick={toggleTheme}
@@ -192,10 +217,36 @@ export default function Navbar() {
                   </Link>
                 )
               })}
+              <div className="mt-2 border-t border-[var(--border)] pt-2">
+                {user ? (
+                  <div className="space-y-1">
+                    <p className="px-4 text-xs text-[var(--text-muted)]">{user.email}</p>
+                    <button
+                      onClick={() => { signOut(); closeMobileMenu() }}
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setLoginModalOpen(true); closeMobileMenu() }}
+                    className="w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--bg-accent)] hover:bg-[var(--bg-accent)]/10 transition-colors"
+                  >
+                    Sign In
+                  </button>
+                )}
+              </div>
             </nav>
           </div>
         </>
       )}
+
+      <LoginModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onLogin={signIn}
+      />
     </header>
   )
 }

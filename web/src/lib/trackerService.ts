@@ -68,11 +68,12 @@ export async function saveProgram(program: TrackerProgram): Promise<void> {
     .upsert(
       {
         user_id: userId,
+        program_id: program.id,
         program_data: programData,
         updated_at: new Date().toISOString(),
       },
       {
-        onConflict: 'user_id, (program_data->>id)',
+        onConflict: 'user_id, program_id',
         ignoreDuplicates: false,
       }
     )
@@ -150,12 +151,13 @@ export async function migrateLocalToSupabase(): Promise<void> {
 
   const rows = localPrograms.map((p) => ({
     user_id: userId,
+    program_id: p.id,
     program_data: p,
     updated_at: new Date().toISOString(),
   }))
 
   const { error } = await supabase.from('user_tracker_programs').upsert(rows, {
-    onConflict: 'user_id, (program_data->>id)',
+    onConflict: 'user_id, program_id',
     ignoreDuplicates: false,
   })
 

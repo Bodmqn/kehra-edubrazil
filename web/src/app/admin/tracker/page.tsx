@@ -29,7 +29,9 @@ export default function AdminTrackerPage() {
         setTotalCloudPrograms(cloudCount ?? 0)
         setTotalSyncedUsers(new Set(cloudUsers?.map((r) => r.user_id) ?? []).size)
       } catch (e) {
-        setFetchError(e instanceof Error ? e.message : 'Failed to load tracker data.')
+        const msg = e instanceof Error ? e.message : 'Failed to load tracker data.'
+        console.error('Admin tracker error:', msg)
+        setFetchError(msg)
       }
       setLoading(false)
     }
