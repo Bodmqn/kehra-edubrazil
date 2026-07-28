@@ -25,7 +25,7 @@ import { getPrograms, saveProgram, deleteProgram, migrateLocalToSupabase } from 
 export default function TrackerPage() {
   usePageMeta('My Tracker', 'Track your graduate program applications and deadlines')
 
-  const { user, loading: authLoading, signIn } = useAuth()
+  const { user, loading: authLoading, signIn, signUp, resetPassword } = useAuth()
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
 
@@ -636,7 +636,9 @@ export default function TrackerPage() {
       <LoginModal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
-        onLogin={signIn}
+        onSignIn={signIn}
+        onSignUp={signUp}
+        onResetPassword={resetPassword}
       />
     </div>
   )

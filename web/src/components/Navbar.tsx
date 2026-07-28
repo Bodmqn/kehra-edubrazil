@@ -14,7 +14,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
-  const { user, loading: authLoading, signIn, signOut } = useAuth()
+  const { user, loading: authLoading, signIn, signUp, resetPassword, signOut } = useAuth()
 
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
@@ -267,7 +267,9 @@ export default function Navbar() {
       <LoginModal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
-        onLogin={signIn}
+        onSignIn={signIn}
+        onSignUp={signUp}
+        onResetPassword={resetPassword}
       />
     </>
   )

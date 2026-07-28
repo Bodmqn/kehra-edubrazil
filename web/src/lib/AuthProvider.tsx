@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase'
 export interface AuthContextValue {
   user: User | null
   loading: boolean
-  signIn: (email: string) => Promise<{ error: string | null }>
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -15,6 +17,8 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
   signIn: async () => ({ error: 'Auth provider not initialized' }),
+  signUp: async () => ({ error: 'Auth provider not initialized' }),
+  resetPassword: async () => ({ error: 'Auth provider not initialized' }),
   signOut: async () => {},
 })
 
@@ -41,13 +45,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = useCallback(async (email: string): Promise<{ error: string | null }> => {
-    const { error } = await supabase.auth.signInWithOtp({
+  const signIn = useCallback(async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const signUp = useCallback(async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signUp({
       email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
-      },
+      password,
+      options: { emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined },
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const resetPassword = useCallback(async (email: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/update-password` : undefined,
     })
     return { error: error?.message ?? null }
   }, [])
@@ -58,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   )
