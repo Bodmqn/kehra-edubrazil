@@ -139,7 +139,7 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={() => setLoginModalOpen(true)}
-                className="hidden sm:inline-flex items-center justify-center rounded-lg border border-[var(--bg-accent)]/30 bg-[var(--bg-accent)]/10 px-3 py-1.5 text-xs text-[var(--bg-accent)] hover:bg-[var(--bg-accent)]/20 transition-colors"
+                className="hidden sm:inline-flex items-center justify-center rounded-lg bg-[var(--bg-accent)] px-3 py-1.5 text-xs font-medium text-black hover:opacity-90 transition-colors"
               >
                 Sign In
               </button>
