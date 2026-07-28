@@ -14,6 +14,7 @@ export default function AdminDashboard() {
     activeNotice: false,
     remindersSent: 0,
     trackerPrograms: 0,
+    syncedPrograms: 0,
   })
   const [statsError, setStatsError] = useState<string | null>(null)
 
@@ -28,6 +29,7 @@ export default function AdminDashboard() {
           { data: notices },
           { count: reminderCount },
           { count: trackerCount },
+          { count: syncedCount },
         ] = await Promise.all([
           supabase.from('universities').select('*', { count: 'exact', head: true }),
           supabase.from('programs').select('*', { count: 'exact', head: true }),
@@ -35,6 +37,7 @@ export default function AdminDashboard() {
           supabase.from('general_notices').select('id').eq('active', true).limit(1),
           supabase.from('reminder_logs').select('*', { count: 'exact', head: true }),
           supabase.from('user_reminders').select('*', { count: 'exact', head: true }),
+          supabase.from('user_tracker_programs').select('*', { count: 'exact', head: true }),
         ])
         setStats({
           universities: uniCount ?? 0,
@@ -43,6 +46,7 @@ export default function AdminDashboard() {
           activeNotice: (notices ?? []).length > 0,
           remindersSent: reminderCount ?? 0,
           trackerPrograms: trackerCount ?? 0,
+          syncedPrograms: syncedCount ?? 0,
         })
         setStatsError(null)
       } catch {
@@ -73,7 +77,8 @@ export default function AdminDashboard() {
     { label: 'Programs', value: stats.programs, href: null, color: 'var(--bg-accent)' },
     { label: 'Subscribers', value: stats.subscribers, href: '/admin/subscribers', color: 'var(--bg-secondary)' },
     { label: 'Reminders Sent', value: stats.remindersSent, href: '/admin/reminder-logs', color: 'var(--warning)' },
-    { label: 'Tracker Programs', value: stats.trackerPrograms, href: '/admin/tracker', color: 'var(--success)' },
+    { label: 'Email Reminders', value: stats.trackerPrograms, href: '/admin/tracker', color: 'var(--success)' },
+    { label: 'Synced Programs', value: stats.syncedPrograms, href: '/admin/tracker', color: 'var(--bg-accent)' },
     { label: 'Active Notice', value: stats.activeNotice ? 'Yes' : 'No', href: '/admin/notice', color: stats.activeNotice ? 'var(--warning)' : 'var(--text-muted)' },
   ]
 
@@ -101,7 +106,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats grid */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {statCards.map((card) => (
           <div
             key={card.label}
