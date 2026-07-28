@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NAV_ITEMS } from '@/lib/constants'
@@ -16,6 +16,7 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { user, loading: authLoading, signIn, signOut } = useAuth()
 
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
 
   useEffect(() => {
@@ -32,6 +33,17 @@ export default function Navbar() {
       document.body.style.overflow = ''
     }
   }, [isMobileMenuOpen])
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        closeMobileMenu()
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [isMobileMenuOpen, closeMobileMenu])
 
   if (isAdmin) {
     return (
@@ -78,6 +90,7 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)] bg-[var(--bg-dark)]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3" aria-label="EduBrazil Hub + The Kehra home">
@@ -184,20 +197,28 @@ export default function Navbar() {
 
       {isMobileMenuOpen && (
         <>
-          <div
-            className="fixed inset-0 top-16 z-40"
-            onClick={closeMobileMenu}
-            aria-hidden="true"
-          >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          </div>
+          <div className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
           <div
             id="mobile-menu"
+            ref={mobileMenuRef}
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
             className="fixed top-16 left-0 right-0 z-40 border-b border-[var(--border)] bg-[var(--bg-dark)]"
           >
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+              <span className="text-sm font-medium text-white">Navigation</span>
+              <button
+                onClick={closeMobileMenu}
+                className="rounded-lg p-1.5 text-[var(--text-muted)] hover:text-white transition-colors"
+                aria-label="Close navigation menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
             <nav className="flex flex-col gap-1 px-4 pb-6 pt-4" aria-label="Mobile navigation">
               {NAV_ITEMS.map((item) => {
                 const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
@@ -242,11 +263,12 @@ export default function Navbar() {
         </>
       )}
 
+    </header>
       <LoginModal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
         onLogin={signIn}
       />
-    </header>
+    </>
   )
 }
