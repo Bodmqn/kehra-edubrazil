@@ -15,6 +15,7 @@ export default function AdminDashboard() {
     remindersSent: 0,
     trackerPrograms: 0,
     syncedPrograms: 0,
+    activeToday: 0,
   })
   const [statsError, setStatsError] = useState<string | null>(null)
 
@@ -30,6 +31,7 @@ export default function AdminDashboard() {
           { count: reminderCount },
           { count: trackerCount },
           { count: syncedCount },
+          { count: todayCount },
         ] = await Promise.all([
           supabase.from('universities').select('*', { count: 'exact', head: true }),
           supabase.from('programs').select('*', { count: 'exact', head: true }),
@@ -38,6 +40,7 @@ export default function AdminDashboard() {
           supabase.from('reminder_logs').select('*', { count: 'exact', head: true }),
           supabase.from('user_reminders').select('*', { count: 'exact', head: true }),
           supabase.from('user_tracker_programs').select('*', { count: 'exact', head: true }),
+          supabase.from('user_activity').select('*', { count: 'exact', head: true }).eq('active_date', new Date().toISOString().split('T')[0]),
         ])
         setStats({
           universities: uniCount ?? 0,
@@ -47,6 +50,7 @@ export default function AdminDashboard() {
           remindersSent: reminderCount ?? 0,
           trackerPrograms: trackerCount ?? 0,
           syncedPrograms: syncedCount ?? 0,
+          activeToday: todayCount ?? 0,
         })
         setStatsError(null)
       } catch {
@@ -80,6 +84,7 @@ export default function AdminDashboard() {
     { label: 'Email Reminders', value: stats.trackerPrograms, href: '/admin/tracker', color: 'var(--success)' },
     { label: 'Synced Programs', value: stats.syncedPrograms, href: '/admin/tracker', color: 'var(--bg-accent)' },
     { label: 'Active Notice', value: stats.activeNotice ? 'Yes' : 'No', href: '/admin/notice', color: stats.activeNotice ? 'var(--warning)' : 'var(--text-muted)' },
+    { label: 'Active Today', value: stats.activeToday, href: '/admin/user-activity', color: 'var(--bg-primary)' },
   ]
 
   const quickLinks = [
@@ -90,6 +95,7 @@ export default function AdminDashboard() {
     { label: 'Trigger Scrape', href: '/admin/trigger', icon: '🔄' },
     { label: 'Reminder Logs', href: '/admin/reminder-logs', icon: '🔔' },
     { label: 'Tracker Overview', href: '/admin/tracker', icon: '📌' },
+    { label: 'User Activity', href: '/admin/user-activity', icon: '📈' },
   ]
 
   return (

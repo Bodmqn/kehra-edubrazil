@@ -17,6 +17,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Dashboard', href: '/admin', icon: '📊' },
       { label: 'Admin Users', href: '/admin/admin-users', icon: '🔐' },
       { label: 'Users', href: '/admin/users', icon: '👤' },
+      { label: 'User Activity', href: '/admin/user-activity', icon: '📈' },
     ],
   },
   {

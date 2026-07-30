@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import SkipLink from '@/components/SkipLink'
 import GeneralNoticeBar from '@/components/GeneralNoticeBar'
+import { UserHeartbeat } from '@/components/UserHeartbeat'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/lib/AuthProvider'
 
@@ -54,6 +55,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--bg-dark)] font-sans" style={{ color: 'var(--text-primary)' }}>
         <ThemeProvider>
           <AuthProvider>
+            <UserHeartbeat />
             <SkipLink />
             <Navbar />
             <GeneralNoticeBar />
