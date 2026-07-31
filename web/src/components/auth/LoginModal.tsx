@@ -38,6 +38,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
   const [confirmPassword, setConfirmPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [resetMode, setResetMode] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -52,6 +53,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
       setConfirmPassword('')
       setStatus('idle')
       setErrorMsg('')
+      setSuccessMsg('')
       setResetMode(false)
       setResetSent(false)
       setShowPassword(false)
@@ -99,13 +101,19 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
     }
     setStatus('loading')
     setErrorMsg('')
+    setSuccessMsg('')
     const { error } = await onSignUp(email.trim(), password)
     if (error) {
       setStatus('error')
       setErrorMsg(error)
     } else {
-      setStatus('done')
-      onClose()
+      setStatus('idle')
+      setPanel('signin')
+      setPassword('')
+      setConfirmPassword('')
+      setShowSignUpPassword(false)
+      setShowConfirmPassword(false)
+      setSuccessMsg('Account created! Sign in with your new credentials.')
     }
   }
 
@@ -148,7 +156,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
         {!resetMode && (
           <div className="mb-4 flex rounded-lg border border-[var(--border)] p-0.5">
             <button
-              onClick={() => { setPanel('signin'); setErrorMsg('') }}
+              onClick={() => { setPanel('signin'); setErrorMsg(''); setSuccessMsg('') }}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 panel === 'signin' ? 'bg-[var(--bg-accent)] text-black' : 'text-[var(--text-muted)] hover:text-white'
               }`}
@@ -156,7 +164,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
               Sign In
             </button>
             <button
-              onClick={() => { setPanel('signup'); setErrorMsg('') }}
+              onClick={() => { setPanel('signup'); setErrorMsg(''); setSuccessMsg('') }}
               className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 panel === 'signup' ? 'bg-[var(--bg-accent)] text-black' : 'text-[var(--text-muted)] hover:text-white'
               }`}
@@ -173,7 +181,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
               Check your inbox (and spam folder) for the password reset link.
             </p>
             <button
-              onClick={() => { setResetMode(false); setResetSent(false) }}
+              onClick={() => { setResetMode(false); setResetSent(false); setSuccessMsg('') }}
               className="text-xs text-[var(--bg-primary)] hover:underline"
             >
               Back to Sign In
@@ -199,7 +207,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setResetMode(false); setErrorMsg('') }}
+                onClick={() => { setResetMode(false); setErrorMsg(''); setSuccessMsg('') }}
                 className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs text-[var(--text-secondary)] hover:text-white"
               >
                 Cancel
@@ -220,7 +228,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setSuccessMsg('') }}
                 placeholder="your@email.com"
                 required
                 disabled={status === 'loading'}
@@ -233,7 +241,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setSuccessMsg('') }}
                   placeholder="Enter your password"
                   required
                   disabled={status === 'loading'}
@@ -251,13 +259,16 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
             </div>
             <button
               type="button"
-              onClick={() => { setResetMode(true); setErrorMsg('') }}
+              onClick={() => { setResetMode(true); setErrorMsg(''); setSuccessMsg('') }}
               className="text-xs text-[var(--text-muted)] hover:text-[var(--bg-primary)]"
             >
               Forgot password?
             </button>
             {status === 'error' && (
               <p className="text-xs text-[var(--danger)]">{errorMsg}</p>
+            )}
+            {successMsg && (
+              <p className="text-xs text-[var(--success)]">{successMsg}</p>
             )}
             <button
               type="submit"
@@ -270,7 +281,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
               Don&apos;t have an account?{' '}
               <button
                 type="button"
-                onClick={() => { setPanel('signup'); setErrorMsg('') }}
+                onClick={() => { setPanel('signup'); setErrorMsg(''); setSuccessMsg('') }}
                 className="text-[var(--bg-primary)] hover:underline"
               >
                 Sign Up
@@ -350,7 +361,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={() => { setPanel('signin'); setErrorMsg('') }}
+                onClick={() => { setPanel('signin'); setErrorMsg(''); setSuccessMsg('') }}
                 className="text-[var(--bg-primary)] hover:underline"
               >
                 Sign In
