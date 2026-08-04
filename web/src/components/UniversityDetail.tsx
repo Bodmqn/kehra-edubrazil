@@ -12,8 +12,9 @@ import Badge from '@/components/Badge'
 import TabBar from '@/components/TabBar'
 import type { TrackerProgram } from '@/lib/trackerTypes'
 import TrackerModal from '@/components/tracker/TrackerModal'
-import { useUser } from '@/lib/AuthProvider'
-import { getPrograms, getSavedInfo, saveProgram, deleteProgram } from '@/lib/trackerService'
+import { saveProgram, deleteProgram } from '@/lib/trackerService'
+import { findSavedProgram } from '@/lib/savedProgramUtils'
+import { useSavedPrograms } from '@/lib/useSavedPrograms'
 import { REGIONS } from '@/lib/constants'
 
 const regionColors: Record<string, string> = Object.fromEntries(
@@ -38,7 +39,6 @@ interface UniversityDetailProps {
 }
 
 export default function UniversityDetail({ slug, fallbackUniversity }: UniversityDetailProps) {
-  const user = useUser()
   const { universities: liveUniversities } = useUniversities()
   const liveUniversity = liveUniversities.find((u) => slugify(u.name) === slug)
   const university = liveUniversity ?? fallbackUniversity
@@ -68,18 +68,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
   const [availTypeFilter, setAvailTypeFilter] = useState<'all' | 'Acadêmico' | 'Profissional'>('all')
   const [availLevelFilter, setAvailLevelFilter] = useState<string>('all')
   const [availSearch, setAvailSearch] = useState('')
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
-  const [savedReminderIds, setSavedReminderIds] = useState<Set<string>>(new Set())
-  const [savedInfoLoaded, setSavedInfoLoaded] = useState(false)
-
-  // Load saved info from Supabase or localStorage
-  useEffect(() => {
-    getSavedInfo().then((info) => {
-      setSavedIds(info.savedIds)
-      setSavedReminderIds(info.savedReminderIds)
-      setSavedInfoLoaded(true)
-    })
-  }, [user])
+  const { programs: savedPrograms } = useSavedPrograms()
 
   const [trackerModalProgram, setTrackerModalProgram] = useState<TrackerProgram | null>(null)
   const [trackerModalOpen, setTrackerModalOpen] = useState(false)
@@ -91,16 +80,19 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
 
   const programId = (acronym: string, name: string, level: string) => slugify(`${acronym}-${name}-${level}`)
 
-  const openTrackerModal = async (pName: string, pLevel: string) => {
+  const savedProgramFor = (pName: string, pLevel: string): TrackerProgram | null => {
     const id = programId(university?.acronym ?? '', pName, pLevel)
+    const byId = savedPrograms.find((sp) => sp.id === id)
+    if (byId) return byId
+    if (!university) return null
+    return findSavedProgram(savedPrograms, university, pName, pLevel)
+  }
 
-    if (savedIds.has(id)) {
-      const all = await getPrograms()
-      const existing = all.find((p) => p.id === id)
-      setTrackerModalProgram(existing ?? null)
-    } else {
-      setTrackerModalProgram({
-        id,
+  const openTrackerModal = (pName: string, pLevel: string) => {
+    const existing = savedProgramFor(pName, pLevel)
+    setTrackerModalProgram(
+      existing ?? {
+        id: programId(university?.acronym ?? '', pName, pLevel),
         name: pName,
         university: `${university?.name ?? ''} (${university?.acronym ?? ''})`,
         deadline: null,
@@ -114,27 +106,29 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
         source: 'manual',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      } as TrackerProgram)
-    }
+      } as TrackerProgram
+    )
     setTrackerModalOpen(true)
   }
 
   const handleTrackerSave = async (program: TrackerProgram) => {
     await saveProgram(program)
-    const info = await getSavedInfo()
-    setSavedIds(info.savedIds)
-    setSavedReminderIds(info.savedReminderIds)
     setTrackerModalOpen(false)
     setTrackerModalProgram(null)
   }
 
   const handleQuickRemove = async (pName: string, pLevel: string) => {
-    const id = programId(university?.acronym ?? '', pName, pLevel)
-    if (!savedIds.has(id)) return
-    await deleteProgram(id)
-    const info = await getSavedInfo()
-    setSavedIds(info.savedIds)
-    setSavedReminderIds(info.savedReminderIds)
+    const existing = savedProgramFor(pName, pLevel)
+    if (!existing) return
+    await deleteProgram(existing.id)
+  }
+
+  const isSaved = (p: { name: string; levelLabel: string }) =>
+    savedProgramFor(p.name, p.levelLabel) !== null
+
+  const hasReminder = (p: { name: string; levelLabel: string }) => {
+    const sp = savedProgramFor(p.name, p.levelLabel)
+    return !!sp && sp.reminderDays.length > 0
   }
 
   const availableLevels = useMemo(() => {
@@ -386,10 +380,10 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                     CAPES {p.capesScore}
                                   </span>
                                 )}
-                                {savedIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) && (
+                                {isSaved(p) && (
                                   <span className="shrink-0 text-xs" title="Saved to tracker">💾</span>
                                 )}
-                                {savedReminderIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) && (
+                                {hasReminder(p) && (
                                   <span className="shrink-0 text-xs" title="Has reminder set">🔔</span>
                                 )}
                               </div>
@@ -428,7 +422,7 @@ export default function UniversityDetail({ slug, fallbackUniversity }: Universit
                                     </div>
                                   </div>
                                   <div className="shrink-0 flex items-center gap-1">
-                                    {savedIds.has(programId(university?.acronym ?? '', p.name, p.levelLabel)) ? (
+                                    {isSaved(p) ? (
                                       <>
                                         <button
                                           onClick={() => openTrackerModal(p.name, p.levelLabel)}

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useMemo } from 'react'
 import type { University } from '@/lib/types'
 import { slugify } from '@/lib/utils'
 import { REGIONS } from '@/lib/constants'
-import { getPrograms } from '@/lib/trackerService'
+import { useSavedPrograms } from '@/lib/useSavedPrograms'
 import Badge from './Badge'
 
 interface UniversityCardProps {
@@ -18,17 +18,15 @@ const regionColors: Record<string, string> = Object.fromEntries(
 )
 
 export default function UniversityCard({ university, programCount }: UniversityCardProps) {
-  const [savedInfo, setSavedInfo] = useState({ saved: false, reminder: false })
+  const { programs } = useSavedPrograms()
 
-  useEffect(() => {
-    getPrograms().then((programs) => {
-      const matching = programs.filter((p) => p.university.startsWith(university.name))
-      setSavedInfo({
-        saved: matching.length > 0,
-        reminder: matching.some((p) => p.reminderDays.length > 0),
-      })
-    })
-  }, [university.name])
+  const savedInfo = useMemo(() => {
+    const matching = programs.filter((p) => p.university.startsWith(university.name))
+    return {
+      saved: matching.length > 0,
+      reminder: matching.some((p) => p.reminderDays.length > 0),
+    }
+  }, [programs, university.name])
 
   return (
     <Link

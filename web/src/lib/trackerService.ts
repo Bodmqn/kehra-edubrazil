@@ -18,13 +18,42 @@ function saveToLocal(programs: TrackerProgram[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(programs))
 }
 
+// ---------- User id memoization ----------
+
+let cachedUserId: string | null | undefined
+
 async function getUserId(): Promise<string | null> {
+  if (cachedUserId !== undefined) return cachedUserId
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    return session?.user?.id ?? null
+    cachedUserId = session?.user?.id ?? null
+    return cachedUserId
   } catch {
+    cachedUserId = null
     return null
   }
+}
+
+// ---------- Change notifications ----------
+
+type Listener = () => void
+
+const listeners = new Set<Listener>()
+
+export function subscribeToTrackerChanges(listener: Listener): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+export function notifyTrackerChanged() {
+  for (const listener of listeners) listener()
+}
+
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((_event, session) => {
+    cachedUserId = session?.user?.id ?? null
+    notifyTrackerChanged()
+  })
 }
 
 // ---------- Public API ----------
@@ -47,6 +76,11 @@ export async function getPrograms(): Promise<TrackerProgram[]> {
   return (data ?? []).map((r) => r.program_data as TrackerProgram)
 }
 
+export function hasLocalPrograms(): boolean {
+  if (typeof window === 'undefined') return false
+  return getFromLocal().length > 0
+}
+
 export async function saveProgram(program: TrackerProgram): Promise<void> {
   const userId = await getUserId()
   if (!userId) {
@@ -58,6 +92,7 @@ export async function saveProgram(program: TrackerProgram): Promise<void> {
       list.unshift(program)
     }
     saveToLocal(list)
+    notifyTrackerChanged()
     return
   }
 
@@ -90,12 +125,14 @@ export async function saveProgram(program: TrackerProgram): Promise<void> {
     }
     saveToLocal(list)
   }
+  notifyTrackerChanged()
 }
 
 export async function deleteProgram(programId: string): Promise<void> {
   const userId = await getUserId()
   if (!userId) {
     saveToLocal(getFromLocal().filter((p) => p.id !== programId))
+    notifyTrackerChanged()
     return
   }
 
@@ -109,6 +146,7 @@ export async function deleteProgram(programId: string): Promise<void> {
     console.error('Failed to delete program from Supabase:', error)
     saveToLocal(getFromLocal().filter((p) => p.id !== programId))
   }
+  notifyTrackerChanged()
 }
 
 export async function getSavedInfo(): Promise<{ savedIds: Set<string>; savedReminderIds: Set<string> }> {
@@ -167,4 +205,5 @@ export async function migrateLocalToSupabase(): Promise<void> {
   }
 
   localStorage.removeItem(STORAGE_KEY)
+  notifyTrackerChanged()
 }

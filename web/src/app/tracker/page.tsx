@@ -20,7 +20,8 @@ import TrackerCard from '@/components/tracker/TrackerCard'
 import TrackerModal from '@/components/tracker/TrackerModal'
 import LoginModal from '@/components/auth/LoginModal'
 import { useAuth } from '@/lib/AuthProvider'
-import { getPrograms, saveProgram, deleteProgram, migrateLocalToSupabase } from '@/lib/trackerService'
+import { getPrograms, saveProgram, deleteProgram, migrateLocalToSupabase, hasLocalPrograms } from '@/lib/trackerService'
+import { getCachedSavedPrograms } from '@/lib/useSavedPrograms'
 
 export default function TrackerPage() {
   usePageMeta('My Tracker', 'Track your graduate program applications and deadlines')
@@ -30,6 +31,8 @@ export default function TrackerPage() {
   const [dataLoading, setDataLoading] = useState(true)
 
   const [programs, setPrograms] = useState<TrackerProgram[]>(() => {
+    const cached = getCachedSavedPrograms()
+    if (cached && cached.length > 0) return cached
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(STORAGE_KEY)
@@ -67,7 +70,9 @@ export default function TrackerPage() {
     }
     ;(async () => {
       try {
-        await migrateLocalToSupabase()
+        if (hasLocalPrograms()) {
+          await migrateLocalToSupabase()
+        }
         const remote = await getPrograms()
         if (remote.length > 0) {
           setPrograms(remote)
