@@ -24,6 +24,7 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
   const activeReminders = getActiveReminders([program])
   const hasReminder = program.reminderDays.length > 0
   const isDue = activeReminders.length > 0
+  const inProgress = program.stage === 'applying' || program.stage === 'applied' || program.stage === 'interview'
 
   const uniName = (() => {
     const match = /^(.+?)(?:\s*\(.*\))?$/.exec(program.university)
@@ -35,11 +36,12 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
 
   return (
     <div
-      className={`group rounded-xl border p-4 transition-all ${
+      className={`group rounded-xl border border-l-4 p-4 transition-all ${
         isDue
           ? 'border-[var(--bg-accent)] bg-[var(--bg-accent)]/5'
           : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--bg-primary)]/30 hover:bg-[var(--bg-card-hover)]'
       }`}
+      style={{ borderLeftColor: stageDef?.color ?? 'var(--border)' }}
     >
       {/* Header */}
       <div className="mb-2 flex items-start justify-between gap-2">
@@ -66,6 +68,12 @@ export default function TrackerCard({ program, onEdit, onDelete, onStageChange }
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <span
+            className={`status-dot ${inProgress ? 'status-dot--pulse' : ''}`}
+            style={{ '--dot-color': stageDef?.color ?? 'var(--text-muted)' } as React.CSSProperties}
+            title={stageDef?.label ?? program.stage}
+            aria-hidden="true"
+          />
           {hasReminder && (
             <span
               className={`rounded px-1.5 py-0.5 text-[9px] ${isDue ? 'bg-[var(--bg-accent)]/20 text-[var(--bg-accent)]' : 'text-[var(--text-muted)]'}`}

@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
       })
       const result = await resp.json()
       if (!resp.ok) throw new Error(result.error || 'Failed to reset password')
-      setFeedback({ type: 'success', text: 'Password updated.' })
+      setFeedback({ type: 'success', text: 'Password updated. The user must set a new password at their next sign-in.' })
       setResetUserId(null)
       setResetPassword('')
     } catch (e) {

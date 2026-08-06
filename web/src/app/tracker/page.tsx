@@ -410,6 +410,37 @@ export default function TrackerPage() {
         <StatsBar programs={programs} />
       </div>
 
+      {/* Stage Legend */}
+      {programs.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--text-muted)]">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="status-dot status-dot--pulse"
+              style={{ '--dot-color': 'var(--warning)' } as React.CSSProperties}
+              aria-hidden="true"
+            />
+            In Progress (pulsing)
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="status-dot"
+              style={{ '--dot-color': 'var(--success)' } as React.CSSProperties}
+              aria-hidden="true"
+            />
+            Completed
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="status-dot"
+              style={{ '--dot-color': 'var(--danger)' } as React.CSSProperties}
+              aria-hidden="true"
+            />
+            Rejected
+          </span>
+          <span className="hidden sm:inline">Left border shows the stage color</span>
+        </div>
+      )}
+
       {/* Timeline */}
       <div className="mb-4">
         <DeadlineTimeline programs={programs} onSelect={openEdit} />

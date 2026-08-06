@@ -8,6 +8,7 @@ import GeneralNoticeBar from '@/components/GeneralNoticeBar'
 import { UserHeartbeat } from '@/components/UserHeartbeat'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/lib/AuthProvider'
+import ForcePasswordChangeGuard from '@/components/ForcePasswordChangeGuard'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -55,6 +56,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--bg-dark)] font-sans" style={{ color: 'var(--text-primary)' }}>
         <ThemeProvider>
           <AuthProvider>
+            <ForcePasswordChangeGuard />
             <UserHeartbeat />
             <SkipLink />
             <Navbar />

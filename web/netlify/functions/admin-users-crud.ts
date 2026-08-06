@@ -74,7 +74,10 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Password must be at least 6 characters' }) }
     }
 
-    const { error } = await supabase.auth.admin.updateUserById(userId, { password: body.password })
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      password: body.password,
+      user_metadata: { force_password_change: true },
+    })
     if (error) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
     }

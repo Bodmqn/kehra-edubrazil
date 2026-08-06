@@ -129,6 +129,12 @@ export default function Navbar() {
             user ? (
               <div className="hidden sm:flex items-center gap-2">
                 <span className="text-xs text-[var(--text-muted)] max-w-[120px] truncate">{user.email}</span>
+                <Link
+                  href="/account"
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-white transition-colors"
+                >
+                  Account
+                </Link>
                 <button
                   onClick={signOut}
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
@@ -242,6 +248,13 @@ export default function Navbar() {
                 {user ? (
                   <div className="space-y-1">
                     <p className="px-4 text-xs text-[var(--text-muted)]">{user.email}</p>
+                    <Link
+                      href="/account"
+                      onClick={closeMobileMenu}
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Account
+                    </Link>
                     <button
                       onClick={() => { signOut(); closeMobileMenu() }}
                       className="w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
