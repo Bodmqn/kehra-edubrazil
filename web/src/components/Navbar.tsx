@@ -12,16 +12,20 @@ export default function Navbar() {
   const pathname = usePathname()
   const isAdmin = pathname.startsWith('/admin')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { user, loading: authLoading, signIn, signUp, resetPassword, signOut } = useAuth()
 
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
   const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), [])
+  const closeProfile = useCallback(() => setProfileOpen(false), [])
 
   useEffect(() => {
     closeMobileMenu()
-  }, [pathname, closeMobileMenu])
+    closeProfile()
+  }, [pathname, closeMobileMenu, closeProfile])
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -35,15 +39,28 @@ export default function Navbar() {
   }, [isMobileMenuOpen])
 
   useEffect(() => {
-    if (!isMobileMenuOpen) return
+    if (!isMobileMenuOpen && !profileOpen) return
     const handleClick = (e: MouseEvent) => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
         closeMobileMenu()
       }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        closeProfile()
+      }
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMobileMenu()
+        closeProfile()
+      }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [isMobileMenuOpen, closeMobileMenu])
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isMobileMenuOpen, profileOpen, closeMobileMenu, closeProfile])
 
   if (isAdmin) {
     return (
@@ -127,20 +144,52 @@ export default function Navbar() {
 
           {!authLoading && (
             user ? (
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="text-xs text-[var(--text-muted)] max-w-[120px] truncate">{user.email}</span>
-                <Link
-                  href="/account"
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:text-white transition-colors"
-                >
-                  Account
-                </Link>
+              <div className="relative hidden sm:block">
                 <button
-                  onClick={signOut}
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+                  type="button"
+                  onClick={() => setProfileOpen((prev) => !prev)}
+                  aria-haspopup="menu"
+                  aria-expanded={profileOpen}
+                  aria-label={`Account menu for ${user.email}`}
+                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
                 >
-                  Sign Out
+                  <span className="max-w-[140px] truncate">{user.email}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {profileOpen ? (
+                      <path d="M18 15l-6-6-6 6" />
+                    ) : (
+                      <path d="M6 9l6 6 6-6" />
+                    )}
+                  </svg>
                 </button>
+                {profileOpen && (
+                  <div
+                    ref={profileRef}
+                    role="menu"
+                    aria-label="Account menu"
+                    className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-dark)] shadow-2xl"
+                  >
+                    <p className="truncate border-b border-[var(--border)] px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+                      {user.email}
+                    </p>
+                    <Link
+                      href="/account"
+                      role="menuitem"
+                      onClick={closeProfile}
+                      className="block w-full px-3 py-2.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Account
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { signOut(); closeProfile() }}
+                      className="block w-full px-3 py-2.5 text-left text-xs text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <button
