@@ -20,6 +20,23 @@ async function requireAdmin(event: HandlerEvent, supabase: SupabaseClient): Prom
   return !!adminUser
 }
 
+async function resolveUserEmails(ids: string[], supabase: SupabaseClient): Promise<Record<string, string>> {
+  const emails: Record<string, string> = {}
+  const missing = new Set(ids)
+  for (let page = 1; page <= 10 && missing.size > 0; page++) {
+    const { data } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+    const rows = data.users ?? []
+    for (const u of rows) {
+      if (missing.has(u.id)) {
+        emails[u.id] = u.email ?? 'user'
+        missing.delete(u.id)
+      }
+    }
+    if (rows.length < 1000) break
+  }
+  return emails
+}
+
 export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const headers = { 'Content-Type': 'application/json' }
 
@@ -62,13 +79,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
     }
 
     const userIds = [...byUser.keys()]
-    const emails: Record<string, string> = {}
-    if (userIds.length > 0) {
-      const { data: users } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      for (const u of users.users ?? []) {
-        if (userIds.includes(u.id)) emails[u.id] = u.email ?? 'user'
-      }
-    }
+    const emails = await resolveUserEmails(userIds, supabase)
 
     const threads = [...byUser.entries()]
       .map(([userId, entry]) => {

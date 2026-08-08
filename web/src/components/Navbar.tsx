@@ -186,9 +186,17 @@ export default function Navbar() {
                       href="/account"
                       role="menuitem"
                       onClick={closeProfile}
+                      className="block w-full px-3 py-2.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Account
+                    </Link>
+                    <Link
+                      href="/messages"
+                      role="menuitem"
+                      onClick={closeProfile}
                       className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
                     >
-                      <span>Account</span>
+                      <span>Message</span>
                       {unread > 0 && (
                         <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[9px] font-bold text-white">
                           {unread}
@@ -315,9 +323,16 @@ export default function Navbar() {
                     <Link
                       href="/account"
                       onClick={closeMobileMenu}
+                      className="block w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                    >
+                      Account
+                    </Link>
+                    <Link
+                      href="/messages"
+                      onClick={closeMobileMenu}
                       className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
                     >
-                      <span>Account</span>
+                      <span>Message</span>
                       {unread > 0 && (
                         <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--danger)] px-1.5 text-[10px] font-bold text-white">
                           {unread}

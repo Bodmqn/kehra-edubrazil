@@ -40,6 +40,23 @@ function parseBody(raw: string | null): CommentBody | null {
   }
 }
 
+async function resolveUserEmails(ids: string[], supabase: SupabaseClient): Promise<Record<string, string>> {
+  const emails: Record<string, string> = {}
+  const missing = new Set(ids)
+  for (let page = 1; page <= 10 && missing.size > 0; page++) {
+    const { data } = await supabase.auth.admin.listUsers({ page, perPage: 1000 })
+    const rows = data.users ?? []
+    for (const u of rows) {
+      if (missing.has(u.id)) {
+        emails[u.id] = u.email ?? 'user'
+        missing.delete(u.id)
+      }
+    }
+    if (rows.length < 1000) break
+  }
+  return emails
+}
+
 export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const headers = { 'Content-Type': 'application/json' }
 
@@ -72,22 +89,13 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       query = query.eq('category', q.category)
     }
 
-    const { data, error } = await query.limit(500)
+    const { data, error } = await query.limit(2000)
     if (error) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
     }
 
     const senderIds = [...new Set<string>((data ?? []).map((c) => c.user_id))]
-    const emails: Record<string, string> = {}
-    if (senderIds.length > 0) {
-      const { data: users } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      })
-      for (const u of users.users) {
-        if (senderIds.includes(u.id)) emails[u.id] = u.email ?? 'user'
-      }
-    }
+    const emails = await resolveUserEmails(senderIds, supabase)
 
     const comments = (data ?? []).map((c) => ({
       ...c,
@@ -111,11 +119,29 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid parent comment' }) }
     }
 
+    // Replies always inherit the parent's category so threads never split across tabs
+    let category = body.category
+    if (body.parent_id != null) {
+      const { data: parent, error: parentError } = await supabase
+        .from('comments')
+        .select('id, category')
+        .eq('id', body.parent_id)
+        .maybeSingle()
+
+      if (parentError) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: parentError.message }) }
+      }
+      if (!parent) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'Parent comment not found' }) }
+      }
+      category = parent.category
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .insert({
         user_id: user.id,
-        category: body.category,
+        category,
         body: body.body.trim(),
         parent_id: body.parent_id ?? null,
       })

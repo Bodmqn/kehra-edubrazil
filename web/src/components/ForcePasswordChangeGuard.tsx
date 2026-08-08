@@ -11,7 +11,8 @@ export default function ForcePasswordChangeGuard() {
 
   useEffect(() => {
     if (loading || !needsPasswordChange) return
-    if (pathname !== '/account') {
+    // Messages stay accessible during a forced password change
+    if (pathname !== '/account' && pathname !== '/messages') {
       router.replace('/account?change=required')
     }
   }, [loading, needsPasswordChange, pathname, router])
