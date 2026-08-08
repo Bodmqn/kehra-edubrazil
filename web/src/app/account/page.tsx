@@ -37,6 +37,7 @@ export default function AccountPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [activeTab, setActiveTab] = useState<'password' | 'messages'>('password')
 
   const handleClose = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -133,6 +134,37 @@ export default function AccountPage() {
           </div>
         )}
 
+        {!needsPasswordChange && (
+          <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg-dark)] p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('password')}
+              className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'password'
+                  ? 'bg-[var(--bg-accent)] text-black'
+                  : 'text-[var(--text-muted)] hover:text-white'
+              }`}
+            >
+              Change Password
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('messages')}
+              className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'messages'
+                  ? 'bg-[var(--bg-accent)] text-black'
+                  : 'text-[var(--text-muted)] hover:text-white'
+              }`}
+            >
+              Message Admin
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'messages' && !needsPasswordChange ? (
+          <AdminMessages />
+        ) : (
+          <>
         <h2 className="mb-4 text-sm font-semibold text-white">Change Password</h2>
 
         {status === 'done' ? (
@@ -228,8 +260,8 @@ export default function AccountPage() {
             </button>
           </form>
         )}
-
-        <AdminMessages />
+          </>
+        )}
       </div>
     </div>
   )
