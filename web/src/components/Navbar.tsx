@@ -7,6 +7,7 @@ import { NAV_ITEMS } from '@/lib/constants'
 import { useTheme } from '@/components/ThemeProvider'
 import { useAuth } from '@/lib/AuthProvider'
 import LoginModal from '@/components/auth/LoginModal'
+import { useUnreadAdminMessages } from '@/lib/useUnreadAdminMessages'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -16,6 +17,7 @@ export default function Navbar() {
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const { theme, toggleTheme } = useTheme()
   const { user, loading: authLoading, signIn, signUp, resetPassword, signOut } = useAuth()
+  const { unread } = useUnreadAdminMessages()
 
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
@@ -23,8 +25,11 @@ export default function Navbar() {
   const closeProfile = useCallback(() => setProfileOpen(false), [])
 
   useEffect(() => {
-    closeMobileMenu()
-    closeProfile()
+    const timer = setTimeout(() => {
+      closeMobileMenu()
+      closeProfile()
+    }, 0)
+    return () => clearTimeout(timer)
   }, [pathname, closeMobileMenu, closeProfile])
 
   useEffect(() => {
@@ -151,9 +156,14 @@ export default function Navbar() {
                   aria-haspopup="menu"
                   aria-expanded={profileOpen}
                   aria-label={`Account menu for ${user.email}`}
-                  className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+                  className="relative flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
                 >
                   <span className="max-w-[140px] truncate">{user.email}</span>
+                  {unread > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[9px] font-bold text-white">
+                      {unread}
+                    </span>
+                  )}
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     {profileOpen ? (
                       <path d="M18 15l-6-6-6 6" />
@@ -176,9 +186,14 @@ export default function Navbar() {
                       href="/account"
                       role="menuitem"
                       onClick={closeProfile}
-                      className="block w-full px-3 py-2.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
                     >
-                      Account
+                      <span>Account</span>
+                      {unread > 0 && (
+                        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[9px] font-bold text-white">
+                          {unread}
+                        </span>
+                      )}
                     </Link>
                     <button
                       type="button"
@@ -300,9 +315,14 @@ export default function Navbar() {
                     <Link
                       href="/account"
                       onClick={closeMobileMenu}
-                      className="w-full rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
+                      className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-white transition-colors"
                     >
-                      Account
+                      <span>Account</span>
+                      {unread > 0 && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--danger)] px-1.5 text-[10px] font-bold text-white">
+                          {unread}
+                        </span>
+                      )}
                     </Link>
                     <button
                       onClick={() => { signOut(); closeMobileMenu() }}

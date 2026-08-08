@@ -62,19 +62,6 @@ export default function UniversityModal({ open, university, initialTab = 'progra
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  useEffect(() => {
-    if (!open || !university) return
-    if (initialTab) setActiveTab(initialTab)
-    resetForm()
-    fetchData()
-  }, [open, university?.id])
-
-  useEffect(() => {
-    if (!open) {
-      setActiveTab(initialTab)
-    }
-  }, [open])
-
   const resetForm = () => {
     setLoading(true)
     setMessage(null)
@@ -116,6 +103,25 @@ export default function UniversityModal({ open, university, initialTab = 'progra
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!open || !university) return
+    const timer = setTimeout(() => {
+      if (initialTab) setActiveTab(initialTab)
+      resetForm()
+      void fetchData()
+    }, 0)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, university?.id])
+
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(() => setActiveTab(initialTab), 0)
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // ---- Details ----
 

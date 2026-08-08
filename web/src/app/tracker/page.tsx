@@ -64,11 +64,11 @@ export default function TrackerPage() {
   // On mount or auth change: load from Supabase if authenticated
   useEffect(() => {
     if (authLoading) return
-    if (!user) {
-      setDataLoading(false)
-      return
-    }
     ;(async () => {
+      if (!user) {
+        setDataLoading(false)
+        return
+      }
       try {
         if (hasLocalPrograms()) {
           await migrateLocalToSupabase()
@@ -108,16 +108,6 @@ export default function TrackerPage() {
   })
   const [formKey, setFormKey] = useState(0)
   const [syncError, setSyncError] = useState('')
-
-  const saveToStorage = async (updated: TrackerProgram[]) => {
-    setPrograms(updated)
-    if (user) {
-      // If authenticated, we save individually after each mutation
-      // This is called after handleSave/handleDelete which already use trackerService
-      return
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-  }
 
   const syncReminderToServer = useCallback(
     async (program: TrackerProgram) => {
@@ -443,7 +433,7 @@ export default function TrackerPage() {
 
       {/* Timeline */}
       <div className="mb-4">
-        <DeadlineTimeline programs={programs} onSelect={openEdit} />
+        <DeadlineTimeline programs={programs} />
       </div>
 
       {/* Reminder Notification Banner */}

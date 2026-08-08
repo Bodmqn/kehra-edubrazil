@@ -1,5 +1,8 @@
-const fs = require('fs')
-const path = require('path')
+import { readFileSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const CSV_PATH = path.join(__dirname, '../../brazil_graduate_courses.csv')
 const OUT_PATH = path.join(__dirname, '../src/lib/available-programs.ts')
@@ -194,7 +197,7 @@ for (const u of universities) {
   nameLookup[normalizeName(u.name)] = { id: u.id, slug: slugify(u.name) }
 }
 
-const csvText = fs.readFileSync(CSV_PATH, 'utf-8')
+const csvText = readFileSync(CSV_PATH, 'utf-8')
 const rows = parseCSV(csvText)
 
 const availablePrograms = {}
@@ -245,7 +248,7 @@ for (const slug of slugs) {
 
 output += '}\n'
 
-fs.writeFileSync(OUT_PATH, output, 'utf-8')
+writeFileSync(OUT_PATH, output, 'utf-8')
 
 console.log(`\nDone! Generated ${OUT_PATH}`)
 console.log(`  CSV rows parsed: ${rows.length}`)

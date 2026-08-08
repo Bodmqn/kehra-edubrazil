@@ -9,6 +9,7 @@ import { UserHeartbeat } from '@/components/UserHeartbeat'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/lib/AuthProvider'
 import ForcePasswordChangeGuard from '@/components/ForcePasswordChangeGuard'
+import ChatWidget from '@/components/chat/ChatWidget'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -65,6 +66,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
+            <ChatWidget />
           </AuthProvider>
         </ThemeProvider>
       </body>

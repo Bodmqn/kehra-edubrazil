@@ -47,18 +47,21 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
 
   useEffect(() => {
     if (!open) {
-      setPanel('signin')
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
-      setStatus('idle')
-      setErrorMsg('')
-      setSuccessMsg('')
-      setResetMode(false)
-      setResetSent(false)
-      setShowPassword(false)
-      setShowSignUpPassword(false)
-      setShowConfirmPassword(false)
+      const timer = setTimeout(() => {
+        setPanel('signin')
+        setEmail('')
+        setPassword('')
+        setConfirmPassword('')
+        setStatus('idle')
+        setErrorMsg('')
+        setSuccessMsg('')
+        setResetMode(false)
+        setResetSent(false)
+        setShowPassword(false)
+        setShowSignUpPassword(false)
+        setShowConfirmPassword(false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [open])
 

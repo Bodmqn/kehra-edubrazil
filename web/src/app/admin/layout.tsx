@@ -33,6 +33,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'General Notice', href: '/admin/notice', icon: '📢' },
       { label: 'Notice History', href: '/admin/notice/history', icon: '📜' },
       { label: 'Splash Notice', href: '/admin/splash-notice', icon: '💬' },
+      { label: 'User Comments', href: '/admin/comments', icon: '🗨️' },
+      { label: 'User Messages', href: '/admin/messages', icon: '✉️' },
       { label: 'Study Guide', href: '/admin/study-guide', icon: '📖' },
     ],
   },

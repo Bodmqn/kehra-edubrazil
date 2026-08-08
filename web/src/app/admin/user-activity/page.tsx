@@ -54,7 +54,10 @@ export default function AdminUserActivityPage() {
   }
 
   useEffect(() => {
-    fetchData()
+    // Runs once on mount; reloads happen via Refresh / Enter on search.
+    const timer = setTimeout(() => { fetchData() }, 0)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleDelete = async (id: string, email: string) => {

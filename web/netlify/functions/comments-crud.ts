@@ -1,0 +1,200 @@
+import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+interface AuthedUser {
+  id: string
+  isAdmin: boolean
+}
+
+async function getAuthedUser(event: HandlerEvent, supabase: SupabaseClient): Promise<AuthedUser | null> {
+  const authHeader = event.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) return null
+
+  const accessToken = authHeader.slice(7)
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken)
+  if (error || !user?.email) return null
+
+  const { data: adminUser } = await supabase
+    .from('admin_users')
+    .select('email')
+    .eq('email', user.email)
+    .maybeSingle()
+
+  return { id: user.id, isAdmin: !!adminUser }
+}
+
+const MAX_BODY = 2000
+
+interface CommentBody {
+  category?: 'general' | 'advisory'
+  body?: string
+  parent_id?: string | null
+}
+
+function parseBody(raw: string | null): CommentBody | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as CommentBody
+  } catch {
+    return null
+  }
+}
+
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
+  const headers = { 'Content-Type': 'application/json' }
+
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server misconfigured: missing Supabase env vars' }) }
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+
+  const user = await getAuthedUser(event, supabase)
+  if (!user) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Authentication required' }) }
+  }
+
+  const { httpMethod } = event
+
+  if (httpMethod === 'GET') {
+    const q = event.queryStringParameters ?? {}
+    let query = supabase
+      .from('comments')
+      .select('id, user_id, category, body, parent_id, created_at, updated_at')
+      .order('created_at', { ascending: false })
+
+    if (q.category === 'general' || q.category === 'advisory') {
+      query = query.eq('category', q.category)
+    }
+
+    const { data, error } = await query.limit(500)
+    if (error) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+    }
+
+    const senderIds = [...new Set<string>((data ?? []).map((c) => c.user_id))]
+    const emails: Record<string, string> = {}
+    if (senderIds.length > 0) {
+      const { data: users } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      })
+      for (const u of users.users) {
+        if (senderIds.includes(u.id)) emails[u.id] = u.email ?? 'user'
+      }
+    }
+
+    const comments = (data ?? []).map((c) => ({
+      ...c,
+      user_email: emails[c.user_id] ?? 'user',
+    }))
+    return { statusCode: 200, headers, body: JSON.stringify({ comments }) }
+  }
+
+  if (httpMethod === 'POST') {
+    const body = parseBody(event.body ?? '')
+    if (!body || typeof body.body !== 'string') {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing comment body' }) }
+    }
+    if (body.body.trim().length === 0 || body.body.length > MAX_BODY) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: `Comment must be between 1 and ${MAX_BODY} characters` }) }
+    }
+    if (body.category !== 'general' && body.category !== 'advisory') {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid category' }) }
+    }
+    if (body.parent_id != null && typeof body.parent_id !== 'string') {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid parent comment' }) }
+    }
+
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        user_id: user.id,
+        category: body.category,
+        body: body.body.trim(),
+        parent_id: body.parent_id ?? null,
+      })
+      .select('id, user_id, category, body, parent_id, created_at, updated_at')
+      .single()
+
+    if (error) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ comment: { ...data, user_email: null } }) }
+  }
+
+  if (httpMethod === 'PATCH') {
+    const commentId = event.queryStringParameters?.id
+    if (!commentId) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing comment id' }) }
+    }
+    const body = parseBody(event.body ?? '')
+    if (!body || typeof body.body !== 'string' || body.body.trim().length === 0 || body.body.length > MAX_BODY) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: `Comment must be between 1 and ${MAX_BODY} characters` }) }
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('comments')
+      .select('id, user_id')
+      .eq('id', commentId)
+      .maybeSingle()
+
+    if (fetchError) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: fetchError.message }) }
+    }
+    if (!existing) {
+      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Comment not found' }) }
+    }
+    if (existing.user_id !== user.id && !user.isAdmin) {
+      return { statusCode: 403, headers, body: JSON.stringify({ error: 'You can only edit your own comments' }) }
+    }
+
+    const { data, error } = await supabase
+      .from('comments')
+      .update({ body: body.body.trim(), updated_at: new Date().toISOString() })
+      .eq('id', commentId)
+      .select('id, user_id, category, body, parent_id, created_at, updated_at')
+      .single()
+
+    if (error) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ comment: data }) }
+  }
+
+  if (httpMethod === 'DELETE') {
+    const commentId = event.queryStringParameters?.id
+    if (!commentId) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing comment id' }) }
+    }
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('comments')
+      .select('id, user_id')
+      .eq('id', commentId)
+      .maybeSingle()
+
+    if (fetchError) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: fetchError.message }) }
+    }
+    if (!existing) {
+      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Comment not found' }) }
+    }
+    if (existing.user_id !== user.id && !user.isAdmin) {
+      return { statusCode: 403, headers, body: JSON.stringify({ error: 'You can only delete your own comments' }) }
+    }
+
+    const { error } = await supabase.from('comments').delete().eq('id', commentId)
+    if (error) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+    }
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) }
+  }
+
+  return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
+}

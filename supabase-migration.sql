@@ -158,3 +158,67 @@ DROP POLICY IF EXISTS "Allow admin DELETE on email_subscriptions" ON email_subsc
 CREATE POLICY "Allow admin DELETE on email_subscriptions"
   ON email_subscriptions FOR DELETE TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_users WHERE email = auth.email()));
+
+-- ============================================================
+-- Comments + Direct Messages (chat widget / account)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK (category IN ('general', 'advisory')),
+  body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
+  parent_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_category_created ON comments (category, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments (parent_id);
+CREATE INDEX IF NOT EXISTS idx_comments_user ON comments (user_id);
+
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "authenticated SELECT comments" ON comments;
+CREATE POLICY "authenticated SELECT comments" ON comments FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "authenticated INSERT comments" ON comments;
+CREATE POLICY "authenticated INSERT comments" ON comments FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id AND parent_id IS DISTINCT FROM id);
+
+DROP POLICY IF EXISTS "authenticated UPDATE own comments" ON comments;
+CREATE POLICY "authenticated UPDATE own comments" ON comments FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "authenticated DELETE own comments" ON comments;
+CREATE POLICY "authenticated DELETE own comments" ON comments FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS direct_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 4000),
+  is_admin_reply BOOLEAN NOT NULL DEFAULT FALSE,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_direct_messages_user ON direct_messages (user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_unread
+  ON direct_messages (is_admin_reply, read_at)
+  WHERE is_admin_reply AND read_at IS NULL;
+
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "authenticated SELECT own messages" ON direct_messages;
+CREATE POLICY "authenticated SELECT own messages" ON direct_messages FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "authenticated INSERT own messages" ON direct_messages;
+CREATE POLICY "authenticated INSERT own messages" ON direct_messages FOR INSERT TO authenticated
+  WITH CHECK (user_id = auth.uid() AND sender_id IS NULL AND NOT is_admin_reply);
+
+DROP POLICY IF EXISTS "authenticated UPDATE own messages read" ON direct_messages;
+CREATE POLICY "authenticated UPDATE own messages read" ON direct_messages FOR UPDATE TO authenticated
+  USING (user_id = auth.uid() AND is_admin_reply)
+  WITH CHECK (user_id = auth.uid() AND is_admin_reply);

@@ -23,11 +23,14 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const stored = localStorage.getItem('kehra-theme') as Theme | null
-    if (stored === 'dark' || stored === 'light') {
-      setTheme(stored)
-    }
-    setMounted(true)
+    const timer = setTimeout(() => {
+      const stored = localStorage.getItem('kehra-theme') as Theme | null
+      if (stored === 'dark' || stored === 'light') {
+        setTheme(stored)
+      }
+      setMounted(true)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {

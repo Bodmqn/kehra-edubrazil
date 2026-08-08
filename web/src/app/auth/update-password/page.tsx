@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -87,12 +88,12 @@ export default function UpdatePasswordPage() {
         {status === 'error' && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--danger)]">{errorMsg}</p>
-            <a
+            <Link
               href="/"
               className="inline-block rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black"
             >
               Go Home
-            </a>
+            </Link>
           </div>
         )}
 

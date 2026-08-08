@@ -7,13 +7,12 @@ import { universities } from '@/lib/data'
 
 interface DeadlineTimelineProps {
   programs: TrackerProgram[]
-  onSelect: (program: TrackerProgram) => void
 }
 
 const uniAcronym = new Map(universities.map(u => [u.name, u.acronym]))
 const uniSlugMap = new Map(universities.map(u => [u.name, slugify(u.name)]))
 
-export default function DeadlineTimeline({ programs, onSelect }: DeadlineTimelineProps) {
+export default function DeadlineTimeline({ programs }: DeadlineTimelineProps) {
   const upcoming = programs
     .filter((p) => {
       if (!p.deadline) return false

@@ -82,7 +82,6 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   }
 
   const monthDayCount = new Map<string, Set<string>>()
-  const monthStart = monthAgo.split('T')[0]
   for (const row of activityRows ?? []) {
     if (!monthDayCount.has(row.user_id)) monthDayCount.set(row.user_id, new Set())
     monthDayCount.get(row.user_id)!.add(row.active_date)
@@ -109,7 +108,7 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   const totalUsers = authUsers.users.length
 
   // Combine with auth users
-  let usersList = authUsers.users
+  const usersList = authUsers.users
     .filter((u) => !search || u.email?.toLowerCase().includes(search))
     .map((u) => ({
       id: u.id,

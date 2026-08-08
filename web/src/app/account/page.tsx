@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthProvider'
+import AdminMessages from '@/components/chat/AdminMessages'
 
 function EyeIcon() {
   return (
@@ -227,6 +228,8 @@ export default function AccountPage() {
             </button>
           </form>
         )}
+
+        <AdminMessages />
       </div>
     </div>
   )

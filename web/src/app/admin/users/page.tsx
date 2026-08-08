@@ -38,7 +38,8 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
-    fetchUsers()
+    const timer = setTimeout(fetchUsers, 0)
+    return () => clearTimeout(timer)
   }, [])
 
   const handleDelete = async (id: string, email: string) => {
