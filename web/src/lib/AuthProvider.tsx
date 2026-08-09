@@ -44,8 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
+      if (event === 'PASSWORD_RECOVERY' && typeof window !== 'undefined') {
+        const path = window.location.pathname
+        if (path !== '/auth/update-password') {
+          window.location.assign('/auth/update-password')
+        }
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -69,9 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resetPassword = useCallback(async (email: string): Promise<{ error: string | null }> => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: typeof window !== 'undefined' ? `${SITE_URL || window.location.origin}/auth/update-password` : undefined,
-    })
+    const redirectTo = typeof window !== 'undefined' ? `${SITE_URL || window.location.origin}/auth/update-password` : undefined
+    console.info('resetPasswordForEmail redirectTo:', redirectTo)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     if (error) console.error('resetPasswordForEmail failed:', error)
     return { error: error?.message ?? null }
   }, [])
