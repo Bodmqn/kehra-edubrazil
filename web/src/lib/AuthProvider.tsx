@@ -75,7 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resetPassword = useCallback(async (email: string): Promise<{ error: string | null }> => {
-    const redirectTo = typeof window !== 'undefined' ? `${SITE_URL || window.location.origin}/auth/update-password` : undefined
+    if (!SITE_URL) {
+      console.warn('NEXT_PUBLIC_SITE_URL is not set; reset links will be broken.')
+    }
+    const redirectTo = SITE_URL ? `${SITE_URL}/auth/update-password` : undefined
     console.info('resetPasswordForEmail redirectTo:', redirectTo)
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     if (error) console.error('resetPasswordForEmail failed:', error)
