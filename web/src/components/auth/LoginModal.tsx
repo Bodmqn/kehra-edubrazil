@@ -8,9 +8,16 @@ interface LoginModalProps {
   onSignIn: (email: string, password: string) => Promise<{ error: string | null }>
   onSignUp: (email: string, password: string) => Promise<{ error: string | null }>
   onResetPassword: (email: string) => Promise<{ error: string | null }>
+  onSuccess?: () => void
 }
 
 type Panel = 'signin' | 'signup'
+
+function errorText(raw: string | null, fallback: string): string {
+  const trimmed = raw?.trim()
+  if (!trimmed || trimmed === '{}') return fallback
+  return trimmed
+}
 
 function EyeIcon() {
   return (
@@ -31,7 +38,7 @@ function EyeOffIcon() {
   )
 }
 
-export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetPassword }: LoginModalProps) {
+export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetPassword, onSuccess }: LoginModalProps) {
   const [panel, setPanel] = useState<Panel>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -82,9 +89,10 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
     const { error } = await onSignIn(email.trim(), password)
     if (error) {
       setStatus('error')
-      setErrorMsg(error)
+      setErrorMsg(errorText(error, 'Could not sign in. Please try again.'))
     } else {
       setStatus('done')
+      onSuccess?.()
       onClose()
     }
   }
@@ -108,7 +116,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
     const { error } = await onSignUp(email.trim(), password)
     if (error) {
       setStatus('error')
-      setErrorMsg(error)
+      setErrorMsg(errorText(error, 'Could not create your account. Please try again.'))
     } else {
       setStatus('idle')
       setPanel('signin')
@@ -128,7 +136,7 @@ export default function LoginModal({ open, onClose, onSignIn, onSignUp, onResetP
     const { error } = await onResetPassword(email.trim())
     if (error) {
       setStatus('error')
-      setErrorMsg(error)
+      setErrorMsg(errorText(error, 'Could not send the reset link. Please try again later.'))
     } else {
       setResetSent(true)
       setStatus('idle')

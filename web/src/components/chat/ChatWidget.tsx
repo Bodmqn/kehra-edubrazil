@@ -158,7 +158,7 @@ export default function ChatWidget() {
             </p>
             {!authLoading && (
               <button
-                onClick={() => setLoginOpen(true)}
+                onClick={() => { setLoginOpen(true); setOpen(false) }}
                 className="rounded-lg bg-[var(--bg-accent)] px-4 py-2 text-sm font-medium text-black hover:opacity-90"
               >
                 Sign In
@@ -251,6 +251,7 @@ export default function ChatWidget() {
       <LoginModal
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
+        onSuccess={() => setOpen(true)}
         onSignIn={signIn}
         onSignUp={signUp}
         onResetPassword={resetPassword}

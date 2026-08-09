@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || ''
+
 export interface AuthContextValue {
   user: User | null
   loading: boolean
@@ -68,8 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = useCallback(async (email: string): Promise<{ error: string | null }> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/update-password` : undefined,
+      redirectTo: typeof window !== 'undefined' ? `${SITE_URL || window.location.origin}/auth/update-password` : undefined,
     })
+    if (error) console.error('resetPasswordForEmail failed:', error)
     return { error: error?.message ?? null }
   }, [])
 
