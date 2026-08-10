@@ -5,6 +5,9 @@ import type { StickyColor, StickyNote } from '@/lib/stickyNoteService'
 import {
   STICKY_COLORS,
   STICKY_NOTE_WIDTH,
+  STICKY_NOTE_DEFAULT_HEIGHT,
+  STICKY_NOTE_MIN_WIDTH,
+  STICKY_NOTE_MIN_HEIGHT,
   STICKY_NOTE_HEADER_HEIGHT,
   getStickyColor,
   getStickyNotes,
@@ -33,6 +36,17 @@ interface DragState {
   dy: number
   x: number
   y: number
+}
+
+interface ResizeState {
+  id: string
+  note: StickyNote
+  startX: number
+  startY: number
+  startW: number
+  startH: number
+  w: number
+  h: number
 }
 
 function StickyNoteIcon() {
@@ -69,6 +83,7 @@ export default function StickyNotes() {
 
   const zCounter = useRef(0)
   const dragRef = useRef<DragState | null>(null)
+  const resizeRef = useRef<ResizeState | null>(null)
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const interactedRef = useRef(false)
 
@@ -150,6 +165,8 @@ export default function StickyNotes() {
       color: 'yellow',
       x: Math.max(8, vw - STICKY_NOTE_WIDTH - 24 - jitter),
       y: Math.min(Math.max(8, vh - 200), 88 + jitter),
+      w: STICKY_NOTE_WIDTH,
+      h: STICKY_NOTE_DEFAULT_HEIGHT,
       z: zCounter.current++,
       minimized: false,
       archived: false,
@@ -260,7 +277,7 @@ export default function StickyNotes() {
     if (!drag) return
     const x = Math.min(
       Math.max(0, e.clientX - drag.dx),
-      Math.max(0, window.innerWidth - STICKY_NOTE_WIDTH)
+      Math.max(0, window.innerWidth - drag.note.w)
     )
     const y = Math.min(
       Math.max(0, e.clientY - drag.dy),
@@ -289,10 +306,57 @@ export default function StickyNotes() {
     if (moved) void saveStickyNote(updated)
   }
 
-  const growTextarea = (el: HTMLTextAreaElement | null) => {
-    if (!el) return
-    el.style.height = '0px'
-    el.style.height = `${el.scrollHeight}px`
+  const onResizePointerDown = (e: React.PointerEvent<HTMLElement>, note: StickyNote) => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    resizeRef.current = {
+      id: note.id,
+      note,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: note.w,
+      startH: note.h,
+      w: note.w,
+      h: note.h,
+    }
+    bringToFront(note)
+  }
+
+  const onResizePointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    const rs = resizeRef.current
+    if (!rs) return
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const w = Math.min(
+      Math.max(STICKY_NOTE_MIN_WIDTH, rs.startW + (e.clientX - rs.startX)),
+      Math.max(STICKY_NOTE_MIN_WIDTH, vw - rs.note.x)
+    )
+    const h = Math.min(
+      Math.max(STICKY_NOTE_MIN_HEIGHT, rs.startH + (e.clientY - rs.startY)),
+      Math.max(STICKY_NOTE_MIN_HEIGHT, vh - rs.note.y)
+    )
+    rs.w = w
+    rs.h = h
+    setNotes((prev) => prev.map((n) => (n.id === rs.id ? { ...n, w, h } : n)))
+  }
+
+  const endResize = () => {
+    const rs = resizeRef.current
+    if (!rs) return
+    resizeRef.current = null
+    const current = notesRef.current.find((n) => n.id === rs.id)
+    const base = current ?? rs.note
+    const resized = rs.w !== rs.startW || rs.h !== rs.startH
+    const updated = {
+      ...base,
+      w: rs.w,
+      h: rs.h,
+      updatedAt: resized ? new Date().toISOString() : base.updatedAt,
+    }
+    markInteracted()
+    setNotes((prev) => prev.map((n) => (n.id === rs.id ? updated : n)))
+    if (resized) void saveStickyNote(updated)
   }
 
   const archivedNotes = notes.filter((n) => n.archived)
@@ -310,7 +374,13 @@ export default function StickyNotes() {
           <div
             key={note.id}
             className="sticky-note--enter fixed flex flex-col overflow-hidden rounded-lg shadow-2xl shadow-black/50"
-            style={{ left: note.x, top: note.y, zIndex: z, width: STICKY_NOTE_WIDTH }}
+            style={{
+              left: note.x,
+              top: note.y,
+              zIndex: z,
+              width: note.w,
+              height: note.minimized ? undefined : note.h,
+            }}
           >
             <header
               className="flex h-[30px] cursor-grab select-none items-center gap-0.5 px-1.5 active:cursor-grabbing"
@@ -364,14 +434,39 @@ export default function StickyNotes() {
 
             {!note.minimized && (
               <textarea
-                className="w-full resize-none px-2.5 py-2 text-[13px] leading-snug text-black/80 outline-none placeholder:text-black/30"
-                style={{ backgroundColor: palette.body, minHeight: 96 }}
+                className="min-h-0 w-full flex-1 resize-none overflow-y-auto px-2.5 py-2 text-[13px] leading-snug text-black/80 outline-none placeholder:text-black/30"
+                style={{ backgroundColor: palette.body }}
                 value={note.content}
                 onChange={(e) => updateContent(note.id, e.target.value)}
-                ref={growTextarea}
                 placeholder="Type something…"
                 aria-label="Sticky note content"
               />
+            )}
+
+            {!note.minimized && (
+              <span
+                aria-label="Resize note"
+                onPointerDown={(e) => onResizePointerDown(e, note)}
+                onPointerMove={onResizePointerMove}
+                onPointerUp={endResize}
+                onPointerCancel={endResize}
+                className="absolute bottom-1 right-1 flex h-3.5 w-3.5 cursor-nwse-resize items-center justify-center text-black/40 hover:text-black/70"
+                style={{ touchAction: 'none' }}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 21H9" />
+                  <path d="M21 15v6" />
+                </svg>
+              </span>
             )}
 
             {colorMenuFor === note.id && (

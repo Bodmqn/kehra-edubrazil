@@ -19,6 +19,8 @@ import {
   hasLocalStickyNotes,
   migrateLocalStickyNotesToSupabase,
   STICKY_STORAGE_KEY,
+  STICKY_NOTE_WIDTH,
+  STICKY_NOTE_DEFAULT_HEIGHT,
 } from '@/lib/stickyNoteService'
 import type { StickyNote } from '@/lib/stickyNoteService'
 
@@ -29,6 +31,8 @@ function note(partial: Partial<StickyNote> = {}): StickyNote {
     color: 'yellow',
     x: 100,
     y: 80,
+    w: STICKY_NOTE_WIDTH,
+    h: STICKY_NOTE_DEFAULT_HEIGHT,
     z: 0,
     minimized: false,
     archived: false,

@@ -8,6 +8,8 @@ export interface StickyNote {
   color: StickyColor
   x: number
   y: number
+  w: number
+  h: number
   z: number
   minimized: boolean
   archived: boolean
@@ -18,6 +20,9 @@ export interface StickyNote {
 export const STICKY_STORAGE_KEY = 'kehra-edubrazil-sticky-notes'
 
 export const STICKY_NOTE_WIDTH = 248
+export const STICKY_NOTE_DEFAULT_HEIGHT = 150
+export const STICKY_NOTE_MIN_WIDTH = 160
+export const STICKY_NOTE_MIN_HEIGHT = 90
 export const STICKY_NOTE_HEADER_HEIGHT = 30
 
 const VALID_COLORS: StickyColor[] = ['yellow', 'green', 'blue', 'pink']
@@ -53,13 +58,21 @@ export function sanitizeNote(raw: unknown, fallbackIndex: number): StickyNote | 
   const rawX = typeof n.x === 'number' && Number.isFinite(n.x) ? n.x : fallbackX
   const rawY = typeof n.y === 'number' && Number.isFinite(n.y) ? n.y : fallbackY
   const z = typeof n.z === 'number' && Number.isFinite(n.z) ? n.z : fallbackIndex
+  const w =
+    typeof n.w === 'number' && Number.isFinite(n.w)
+      ? Math.max(STICKY_NOTE_MIN_WIDTH, Math.round(n.w))
+      : STICKY_NOTE_WIDTH
+  const h =
+    typeof n.h === 'number' && Number.isFinite(n.h)
+      ? Math.max(STICKY_NOTE_MIN_HEIGHT, Math.round(n.h))
+      : STICKY_NOTE_DEFAULT_HEIGHT
 
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
   const vh = typeof window !== 'undefined' ? window.innerHeight : 768
-  const x = Math.min(Math.max(0, rawX), Math.max(0, vw - STICKY_NOTE_WIDTH))
-  const y = Math.min(Math.max(0, rawY), Math.max(0, vh - STICKY_NOTE_HEADER_HEIGHT))
+  const x = Math.min(Math.max(0, rawX), Math.max(0, vw - w))
+  const y = Math.min(Math.max(0, rawY), Math.max(0, vh - h))
 
-  return { id, content, color, x, y, z, minimized, archived, createdAt, updatedAt }
+  return { id, content, color, x, y, w, h, z, minimized, archived, createdAt, updatedAt }
 }
 
 function sanitizeList(raw: unknown[]): StickyNote[] {

@@ -247,4 +247,63 @@ describe('StickyNotes', () => {
     expect(wrapper!.style.left).toBe('752px')
     expect(wrapper!.style.top).toBe('88px')
   })
+
+  it('resizes a note via the corner handle and persists the new size', async () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+    await act(async () => {})
+
+    // Move the note away from the right edge so resizing is not viewport-limited
+    const header = screen.getByTitle('Drag to move')
+    fireEvent.pointerDown(header, { button: 0, clientX: 772, clientY: 98 })
+    fireEvent.pointerMove(header, { clientX: 420, clientY: 208 })
+    fireEvent.pointerUp(header)
+
+    const wrapper = noteWrapper()
+    const handle = screen.getByLabelText('Resize note')
+    expect(wrapper!.style.width).toBe('248px')
+    expect(wrapper!.style.height).toBe('150px')
+
+    fireEvent.pointerDown(handle, { button: 0, clientX: 240, clientY: 140 })
+    fireEvent.pointerMove(handle, { clientX: 340, clientY: 240 })
+    fireEvent.pointerUp(handle)
+    await act(async () => {})
+
+    expect(wrapper!.style.width).toBe('348px')
+    expect(wrapper!.style.height).toBe('250px')
+    expect(storedNotes()[0]).toMatchObject({ w: 348, h: 250 })
+  })
+
+  it('clamps resized notes to the viewport and minimum size', () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+
+    const wrapper = noteWrapper()
+    const handle = screen.getByLabelText('Resize note')
+
+    // Dragging far past the screen edges stops at the viewport boundary
+    fireEvent.pointerDown(handle, { button: 0, clientX: 240, clientY: 140 })
+    fireEvent.pointerMove(handle, { clientX: 99999, clientY: 99999 })
+    fireEvent.pointerUp(handle)
+
+    expect(wrapper!.style.width).toBe('272px')
+    expect(wrapper!.style.height).toBe('680px')
+
+    // Dragging inward never goes below the minimum size
+    fireEvent.pointerDown(handle, { button: 0, clientX: 240, clientY: 140 })
+    fireEvent.pointerMove(handle, { clientX: -99999, clientY: -99999 })
+    fireEvent.pointerUp(handle)
+
+    expect(wrapper!.style.width).toBe('160px')
+    expect(wrapper!.style.height).toBe('90px')
+  })
+
+  it('hides the resize handle when a note is minimized', () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+    expect(screen.getByLabelText('Resize note')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Minimize note'))
+    expect(screen.queryByLabelText('Resize note')).not.toBeInTheDocument()
+  })
 })
