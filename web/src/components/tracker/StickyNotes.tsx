@@ -40,6 +40,8 @@ export default function StickyNotes() {
 
   const [notes, setNotes] = useState<StickyNote[]>([])
   const [colorMenuFor, setColorMenuFor] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const notesRef = useRef<StickyNote[]>(notes)
   useEffect(() => {
@@ -89,6 +91,25 @@ export default function StickyNotes() {
     }
   }, [])
 
+  // Close the Add Note menu on outside click or Escape
+  useEffect(() => {
+    if (!menuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen])
+
   const scheduleSave = (id: string) => {
     const existing = timers.current.get(id)
     if (existing) clearTimeout(existing)
@@ -112,11 +133,13 @@ export default function StickyNotes() {
       y: Math.min(Math.max(8, vh - 200), 88 + jitter),
       z: zCounter.current++,
       minimized: false,
+      archived: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     setNotes((prev) => [...prev, note])
     markInteracted()
+    setMenuOpen(false)
     void saveStickyNote(note)
   }
 
@@ -148,14 +171,54 @@ export default function StickyNotes() {
     setColorMenuFor(null)
   }
 
+  const clearTimer = (id: string) => {
+    const t = timers.current.get(id)
+    if (t) clearTimeout(t)
+    timers.current.delete(id)
+  }
+
+  // Permanently delete a note (empty notes on close, or from the menu)
   const removeNote = (note: StickyNote) => {
     markInteracted()
     setNotes((prev) => prev.filter((n) => n.id !== note.id))
     setColorMenuFor((cur) => (cur === note.id ? null : cur))
-    const t = timers.current.get(note.id)
-    if (t) clearTimeout(t)
-    timers.current.delete(note.id)
+    clearTimer(note.id)
     void deleteStickyNote(note.id)
+  }
+
+  // Close a note: discard empty ones, archive notes with saved content
+  const closeNote = (note: StickyNote) => {
+    if (note.content.trim() === '') {
+      removeNote(note)
+      return
+    }
+    markInteracted()
+    const updated = { ...note, archived: true, updatedAt: new Date().toISOString() }
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? updated : n)))
+    setColorMenuFor((cur) => (cur === note.id ? null : cur))
+    clearTimer(note.id)
+    void saveStickyNote(updated)
+  }
+
+  // Reopen an archived note from the Add Note menu
+  const restoreNote = (note: StickyNote) => {
+    markInteracted()
+    const activeCount = notes.filter((n) => !n.archived).length
+    const jitter = (activeCount % 5) * 22
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 768
+    const updated: StickyNote = {
+      ...note,
+      archived: false,
+      minimized: false,
+      x: Math.max(8, vw - STICKY_NOTE_WIDTH - 24 - jitter),
+      y: Math.min(Math.max(8, vh - 200), 88 + jitter),
+      z: zCounter.current++,
+      updatedAt: new Date().toISOString(),
+    }
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? updated : n)))
+    setMenuOpen(false)
+    void saveStickyNote(updated)
   }
 
   const onHeaderPointerDown = (e: React.PointerEvent<HTMLElement>, note: StickyNote) => {
@@ -213,9 +276,13 @@ export default function StickyNotes() {
     el.style.height = `${el.scrollHeight}px`
   }
 
+  const archivedNotes = notes.filter((n) => n.archived)
+
   return (
     <>
-      {notes.map((note) => {
+      {notes
+        .filter((n) => !n.archived)
+        .map((note) => {
         const palette = getStickyColor(note.color)
         const z = BASE_Z + (note.z % Z_LEVELS)
         const title =
@@ -267,9 +334,9 @@ export default function StickyNotes() {
               </button>
               <button
                 data-note-control
-                onClick={() => removeNote(note)}
-                title="Delete"
-                aria-label="Delete note"
+                onClick={() => closeNote(note)}
+                title="Close"
+                aria-label="Close note"
                 className="flex h-[22px] w-[22px] items-center justify-center rounded text-sm leading-none text-black/60 hover:bg-black/10"
               >
                 ×
@@ -308,18 +375,68 @@ export default function StickyNotes() {
         )
       })}
 
-      {/* Floating "Add Note" button */}
-      <button
-        onClick={addNote}
-        title="Add Note"
-        aria-label="Add Note"
-        className="group fixed bottom-6 left-6 z-50 flex h-11 items-center rounded-full bg-[var(--bg-accent)] px-4 text-black shadow-lg shadow-black/40 transition-transform hover:scale-105 focus-visible:scale-105"
-      >
-        <span className="text-lg font-bold leading-none">+</span>
-        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200 group-hover:ml-1.5 group-hover:max-w-[80px] group-hover:opacity-100 group-focus-visible:ml-1.5 group-focus-visible:max-w-[80px] group-focus-visible:opacity-100">
-          Add Note
-        </span>
-      </button>
+      {/* Floating "Add Note" button + closed-notes menu */}
+      <div ref={menuRef} className="fixed bottom-24 right-6 z-50">
+        {menuOpen && (
+          <div className="absolute bottom-full right-0 mb-2 w-64 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-dark)] shadow-2xl shadow-black/50">
+            <button
+              onClick={addNote}
+              aria-label="New Note"
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium text-white hover:bg-white/5"
+            >
+              <span className="text-base font-bold leading-none">+</span>
+              New Note
+            </button>
+            <div className="border-t border-[var(--border)] px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Closed Notes ({archivedNotes.length})
+            </div>
+            {archivedNotes.length === 0 ? (
+              <p className="px-3 pb-3 pt-1 text-xs text-[var(--text-muted)]">No saved notes yet</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto pb-1">
+                {archivedNotes.map((n) => {
+                  const savedTitle = n.content.trim().replace(/\s+/g, ' ').slice(0, 40) || 'Empty note'
+                  return (
+                    <div key={n.id} className="group flex items-center gap-1 px-2">
+                      <button
+                        onClick={() => restoreNote(n)}
+                        className="min-w-0 flex-1 rounded px-1 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:text-white"
+                        title={savedTitle}
+                      >
+                        <span className="block truncate">{savedTitle}</span>
+                      </button>
+                      <button
+                        onClick={() => removeNote(n)}
+                        aria-label={`Delete saved note: ${savedTitle}`}
+                        title="Delete forever"
+                        className="shrink-0 rounded p-1 text-sm leading-none text-[var(--text-muted)] hover:text-[var(--danger)]"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          title="Add Note"
+          aria-label="Add Note"
+          className="group relative flex h-11 items-center rounded-full bg-[var(--bg-accent)] px-3.5 text-black shadow-lg shadow-black/40 transition-transform hover:scale-105 focus-visible:scale-105"
+        >
+          {archivedNotes.length > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white">
+              {archivedNotes.length}
+            </span>
+          )}
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:max-w-[80px] group-hover:opacity-100 group-focus-visible:mr-1.5 group-focus-visible:max-w-[80px] group-focus-visible:opacity-100">
+            Add Note
+          </span>
+          <span className="text-lg font-bold leading-none">+</span>
+        </button>
+      </div>
     </>
   )
 }

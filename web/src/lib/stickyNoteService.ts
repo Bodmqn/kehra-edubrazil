@@ -10,6 +10,7 @@ export interface StickyNote {
   y: number
   z: number
   minimized: boolean
+  archived: boolean
   createdAt: string
   updatedAt: string
 }
@@ -42,6 +43,7 @@ export function sanitizeNote(raw: unknown, fallbackIndex: number): StickyNote | 
   const color = VALID_COLORS.includes(n.color as StickyColor) ? (n.color as StickyColor) : 'yellow'
   const content = typeof n.content === 'string' ? n.content : ''
   const minimized = typeof n.minimized === 'boolean' ? n.minimized : false
+  const archived = typeof n.archived === 'boolean' ? n.archived : false
   const now = new Date().toISOString()
   const createdAt = typeof n.createdAt === 'string' ? n.createdAt : now
   const updatedAt = typeof n.updatedAt === 'string' ? n.updatedAt : createdAt
@@ -57,7 +59,7 @@ export function sanitizeNote(raw: unknown, fallbackIndex: number): StickyNote | 
   const x = Math.min(Math.max(0, rawX), Math.max(0, vw - STICKY_NOTE_WIDTH))
   const y = Math.min(Math.max(0, rawY), Math.max(0, vh - STICKY_NOTE_HEADER_HEIGHT))
 
-  return { id, content, color, x, y, z, minimized, createdAt, updatedAt }
+  return { id, content, color, x, y, z, minimized, archived, createdAt, updatedAt }
 }
 
 function sanitizeList(raw: unknown[]): StickyNote[] {

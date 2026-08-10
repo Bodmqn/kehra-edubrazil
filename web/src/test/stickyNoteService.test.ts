@@ -31,6 +31,7 @@ function note(partial: Partial<StickyNote> = {}): StickyNote {
     y: 80,
     z: 0,
     minimized: false,
+    archived: false,
     createdAt: '2026-08-10T00:00:00.000Z',
     updatedAt: '2026-08-10T00:00:00.000Z',
     ...partial,
@@ -100,6 +101,7 @@ describe('sanitization of corrupted stored data', () => {
       content: '',
       color: 'yellow',
       minimized: false,
+      archived: false,
     })
     expect(notes[0].x).toBeGreaterThanOrEqual(0)
     expect(notes[0].x).toBeLessThanOrEqual(window.innerWidth - 248)
@@ -114,9 +116,18 @@ describe('sanitization of corrupted stored data', () => {
   })
 
   it('keeps valid notes untouched', async () => {
-    await saveStickyNote(note({ id: 'ok', x: 40, y: 60, color: 'blue', content: 'Keep me' }))
+    await saveStickyNote(
+      note({ id: 'ok', x: 40, y: 60, color: 'blue', content: 'Keep me', archived: true })
+    )
     const notes = await getStickyNotes()
     expect(notes).toHaveLength(1)
-    expect(notes[0]).toMatchObject({ id: 'ok', x: 40, y: 60, color: 'blue', content: 'Keep me' })
+    expect(notes[0]).toMatchObject({
+      id: 'ok',
+      x: 40,
+      y: 60,
+      color: 'blue',
+      content: 'Keep me',
+      archived: true,
+    })
   })
 })
