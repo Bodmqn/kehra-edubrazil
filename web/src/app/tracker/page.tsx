@@ -18,6 +18,7 @@ import StatsBar from '@/components/tracker/StatsBar'
 import DeadlineTimeline from '@/components/tracker/DeadlineTimeline'
 import TrackerCard from '@/components/tracker/TrackerCard'
 import TrackerModal from '@/components/tracker/TrackerModal'
+import StickyNotes from '@/components/tracker/StickyNotes'
 import LoginModal from '@/components/auth/LoginModal'
 import { useAuth } from '@/lib/AuthProvider'
 import { getPrograms, saveProgram, deleteProgram, migrateLocalToSupabase, hasLocalPrograms } from '@/lib/trackerService'
@@ -650,6 +651,9 @@ export default function TrackerPage() {
           </p>
         )}
       </div>
+
+      {/* Sticky Notes */}
+      <StickyNotes />
 
       {/* Modals */}
       <TrackerModal

@@ -120,8 +120,27 @@ textarea:focus:not(:focus-visible) {
   }
 }
 
+.sticky-note--enter {
+  animation: sticky-note-enter 0.18s ease-out;
+}
+
+@keyframes sticky-note-enter {
+  from {
+    transform: scale(0.92) translateY(6px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .status-dot--pulse {
+    animation: none;
+  }
+
+  .sticky-note--enter {
     animation: none;
   }
 }
