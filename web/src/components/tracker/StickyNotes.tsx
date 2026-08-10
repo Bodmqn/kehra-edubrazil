@@ -441,9 +441,8 @@ export default function StickyNotes() {
         )}
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          title="Add Note"
           aria-label="Add Note"
-          className="group relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-accent)] text-black shadow-lg shadow-black/40 transition-all duration-200 hover:scale-105 hover:px-4 hover:w-auto focus-visible:scale-105 focus-visible:px-4 focus-visible:w-auto"
+          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bg-accent)] text-black shadow-lg shadow-black/40 transition-all duration-200 hover:scale-105 hover:w-[140px] hover:px-4 focus-visible:scale-105 focus-visible:w-[140px] focus-visible:px-4"
         >
           {archivedNotes.length > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white">
