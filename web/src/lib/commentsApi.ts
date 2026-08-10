@@ -23,6 +23,22 @@ export async function fetchComments(category?: CommentCategory): Promise<ChatCom
   return result.comments as ChatComment[]
 }
 
+export async function fetchUnreadCount(): Promise<number> {
+  const resp = await authedFetch('/.netlify/functions/comments-crud?action=unread-count')
+  const result = await resp.json()
+  if (!resp.ok) throw new Error(result.error || 'Failed to load unread count')
+  return result.count as number
+}
+
+export async function markCommentsRead(): Promise<void> {
+  const resp = await authedFetch('/.netlify/functions/comments-crud?action=mark-read', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+  const result = await resp.json()
+  if (!resp.ok) throw new Error(result.error || 'Failed to mark comments read')
+}
+
 export async function createComment(input: {
   category: CommentCategory
   body: string

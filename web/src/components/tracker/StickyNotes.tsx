@@ -35,6 +35,25 @@ interface DragState {
   y: number
 }
 
+function StickyNoteIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10.5L20 16.5V5a2 2 0 0 0-2-2z" />
+      <path d="M15.5 3v4a2 2 0 0 0 2 2h2.5" />
+    </svg>
+  )
+}
+
 export default function StickyNotes() {
   const { user, loading: authLoading } = useAuth()
 
@@ -424,17 +443,19 @@ export default function StickyNotes() {
           onClick={() => setMenuOpen((o) => !o)}
           title="Add Note"
           aria-label="Add Note"
-          className="group relative flex h-11 items-center rounded-full bg-[var(--bg-accent)] px-3.5 text-black shadow-lg shadow-black/40 transition-transform hover:scale-105 focus-visible:scale-105"
+          className="group relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-accent)] text-black shadow-lg shadow-black/40 transition-all duration-200 hover:scale-105 hover:px-4 hover:w-auto focus-visible:scale-105 focus-visible:px-4 focus-visible:w-auto"
         >
           {archivedNotes.length > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white">
               {archivedNotes.length}
             </span>
           )}
-          <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:max-w-[80px] group-hover:opacity-100 group-focus-visible:mr-1.5 group-focus-visible:max-w-[80px] group-focus-visible:opacity-100">
-            Add Note
+          <span className="flex items-center justify-center">
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium opacity-0 transition-all duration-200 group-hover:mr-1.5 group-hover:max-w-[80px] group-hover:opacity-100 group-focus-visible:mr-1.5 group-focus-visible:max-w-[80px] group-focus-visible:opacity-100">
+              Add Note
+            </span>
+            <StickyNoteIcon />
           </span>
-          <span className="text-lg font-bold leading-none">+</span>
         </button>
       </div>
     </>

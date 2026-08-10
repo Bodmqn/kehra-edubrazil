@@ -80,6 +80,29 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
 
   if (httpMethod === 'GET') {
     const q = event.queryStringParameters ?? {}
+
+    if (q.action === 'unread-count') {
+      const { data: readRow } = await supabase
+        .from('user_comment_reads')
+        .select('last_read_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      // No marker yet: count every comment since the beginning of time
+      const since = readRow?.last_read_at ?? '1970-01-01T00:00:00.000Z'
+
+      const { count, error } = await supabase
+        .from('comments')
+        .select('id', { count: 'exact', head: true })
+        .neq('user_id', user.id)
+        .gt('created_at', since)
+
+      if (error) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ count: count ?? 0, lastReadAt: since }) }
+    }
+
     let query = supabase
       .from('comments')
       .select('id, user_id, category, body, parent_id, created_at, updated_at')
@@ -105,6 +128,22 @@ export const handler: Handler = async (event: HandlerEvent, _context: HandlerCon
   }
 
   if (httpMethod === 'POST') {
+    const q = event.queryStringParameters ?? {}
+
+    if (q.action === 'mark-read') {
+      const now = new Date().toISOString()
+      const { error } = await supabase
+        .from('user_comment_reads')
+        .upsert(
+          { user_id: user.id, last_read_at: now, updated_at: now },
+          { onConflict: 'user_id', ignoreDuplicates: false }
+        )
+      if (error) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, lastReadAt: now }) }
+    }
+
     const body = parseBody(event.body ?? '')
     if (!body || typeof body.body !== 'string') {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing comment body' }) }

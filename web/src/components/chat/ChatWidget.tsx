@@ -7,7 +7,7 @@ import LoginModal from '@/components/auth/LoginModal'
 import CommentItem from '@/components/chat/CommentItem'
 import type { ChatComment, CommentCategory } from '@/lib/chatUtils'
 import { countByCategory, topLevelComments } from '@/lib/chatUtils'
-import { fetchComments, createComment, updateComment, deleteComment } from '@/lib/commentsApi'
+import { fetchComments, createComment, updateComment, deleteComment, fetchUnreadCount, markCommentsRead } from '@/lib/commentsApi'
 
 const CATEGORIES: { key: CommentCategory; label: string; hint: string }[] = [
   { key: 'general', label: 'General', hint: 'General discussion and feedback' },
@@ -44,6 +44,7 @@ export default function ChatWidget() {
   const [posting, setPosting] = useState(false)
   const [postError, setPostError] = useState('')
   const [loginOpen, setLoginOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -62,8 +63,40 @@ export default function ChatWidget() {
     setLoading(false)
   }, [])
 
+  const refreshUnread = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0)
+      return
+    }
+    try {
+      setUnreadCount(await fetchUnreadCount())
+    } catch {
+      // keep the last known count on transient errors
+    }
+  }, [user])
+
+  // Poll for new comments while signed in (60s + on tab focus)
+  useEffect(() => {
+    if (!user) return
+    const initial = setTimeout(refreshUnread, 0)
+    const interval = setInterval(refreshUnread, 60000)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refreshUnread()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearTimeout(initial)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [user, refreshUnread])
+
   useEffect(() => {
     if (isOpen && user) {
+      // Opening the panel marks everything as read (cross-device)
+      void markCommentsRead()
+        .then(() => setUnreadCount(0))
+        .catch(() => {})
       const timer = setTimeout(loadComments, 0)
       return () => clearTimeout(timer)
     }
@@ -118,6 +151,14 @@ export default function ChatWidget() {
         aria-label={isOpen ? 'Close comments panel' : 'Open comments panel'}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bg-accent)] text-black shadow-lg shadow-black/40 transition-transform hover:scale-105"
       >
+        {!isOpen && unreadCount > 0 && (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white"
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
         {isOpen ? <CloseIcon /> : <ChatIcon />}
       </button>
 
