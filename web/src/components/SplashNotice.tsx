@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const SPLASH_KEY = 'kehra-edubrazil-splash'
+export const SPLASH_KEY = 'kehra-edubrazil-splash'
 
 const FALLBACK = {
   title: 'General Notice',
@@ -50,11 +50,27 @@ export default function SplashNotice() {
     document.body.style.overflow = ''
   }
 
+  useEffect(() => {
+    if (!visible) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [visible])
+
   if (!visible || !config.enabled) return null
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="mx-4 max-w-lg rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-8 text-center shadow-2xl">
+      <div className="relative mx-4 max-w-lg rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-8 text-center shadow-2xl">
+        <button
+          onClick={dismiss}
+          aria-label="Close notice"
+          className="absolute right-3 top-3 rounded-lg p-1.5 text-sm leading-none text-[var(--text-muted)] hover:text-white"
+        >
+          ✕
+        </button>
         <div className="mb-4 text-4xl">📢</div>
         <h2 className="mb-4 text-xl font-bold text-white">{config.title}</h2>
         <p className="mb-6 text-sm leading-relaxed text-white/90">
