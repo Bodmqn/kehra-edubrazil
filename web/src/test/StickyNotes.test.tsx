@@ -306,4 +306,45 @@ describe('StickyNotes', () => {
     fireEvent.click(screen.getByLabelText('Minimize note'))
     expect(screen.queryByLabelText('Resize note')).not.toBeInTheDocument()
   })
+
+  it('renders a link in a note as a clickable hyperlink after blur', () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+
+    const textarea = screen.getByLabelText('Sticky note content')
+    fireEvent.change(textarea, { target: { value: 'Check https://ufba.br/en for details' } })
+    fireEvent.blur(textarea)
+
+    const link = screen.getByRole('link', { name: 'https://ufba.br/en' })
+    expect(link).toHaveAttribute('href', 'https://ufba.br/en')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.queryByLabelText('Sticky note content')).not.toBeInTheDocument()
+  })
+
+  it('does not re-enter edit mode when clicking a link, but does when clicking the text', () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+
+    const textarea = screen.getByLabelText('Sticky note content')
+    fireEvent.change(textarea, { target: { value: 'Check https://ufba.br/en for details' } })
+    fireEvent.blur(textarea)
+
+    fireEvent.click(screen.getByRole('link', { name: 'https://ufba.br/en' }))
+    expect(screen.queryByLabelText('Sticky note content')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Sticky note content (preview)'))
+    expect(screen.getByLabelText('Sticky note content')).toBeInTheDocument()
+  })
+
+  it('keeps the textarea visible after blur when the note has no link', () => {
+    render(<StickyNotes />)
+    addNoteViaFab()
+
+    const textarea = screen.getByLabelText('Sticky note content')
+    fireEvent.change(textarea, { target: { value: 'Send transcripts to USP' } })
+    fireEvent.blur(textarea)
+
+    expect(screen.getByLabelText('Sticky note content')).toHaveValue('Send transcripts to USP')
+  })
 })

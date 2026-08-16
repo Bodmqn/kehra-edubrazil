@@ -17,6 +17,7 @@ import {
   hasLocalStickyNotes,
 } from '@/lib/stickyNoteService'
 import { useAuth } from '@/lib/AuthProvider'
+import { hasUrl, linkifyText } from '@/lib/linkify'
 
 const BASE_Z = 41
 const Z_LEVELS = 8
@@ -74,6 +75,7 @@ export default function StickyNotes() {
   const [notes, setNotes] = useState<StickyNote[]>([])
   const [colorMenuFor, setColorMenuFor] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const notesRef = useRef<StickyNote[]>(notes)
@@ -432,16 +434,38 @@ export default function StickyNotes() {
               </button>
             </header>
 
-            {!note.minimized && (
-              <textarea
-                className="min-h-0 w-full flex-1 resize-none overflow-y-auto px-2.5 py-2 text-[13px] leading-snug text-black/80 outline-none placeholder:text-black/30"
-                style={{ backgroundColor: palette.body }}
-                value={note.content}
-                onChange={(e) => updateContent(note.id, e.target.value)}
-                placeholder="Type something…"
-                aria-label="Sticky note content"
-              />
-            )}
+            {!note.minimized &&
+              (hasUrl(note.content) && focusedId !== note.id ? (
+                <div
+                  role="textbox"
+                  aria-label="Sticky note content (preview)"
+                  aria-multiline="true"
+                  tabIndex={0}
+                  onClick={() => setFocusedId(note.id)}
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setFocusedId(note.id)
+                    }
+                  }}
+                  className="min-h-0 w-full flex-1 cursor-text overflow-y-auto whitespace-pre-wrap px-2.5 py-2 text-[13px] leading-snug text-black/80 outline-none focus-visible:ring-1 focus-visible:ring-black/30"
+                  style={{ backgroundColor: palette.body }}
+                >
+                  {linkifyText(note.content)}
+                </div>
+              ) : (
+                <textarea
+                  autoFocus={focusedId === note.id}
+                  className="min-h-0 w-full flex-1 resize-none overflow-y-auto px-2.5 py-2 text-[13px] leading-snug text-black/80 outline-none placeholder:text-black/30"
+                  style={{ backgroundColor: palette.body }}
+                  value={note.content}
+                  onChange={(e) => updateContent(note.id, e.target.value)}
+                  onFocus={() => setFocusedId(note.id)}
+                  onBlur={() => setFocusedId(null)}
+                  placeholder="Type something…"
+                  aria-label="Sticky note content"
+                />
+              ))}
 
             {!note.minimized && (
               <span
