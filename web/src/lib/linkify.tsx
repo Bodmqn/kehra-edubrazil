@@ -17,7 +17,7 @@ export function linkifyText(text: string): React.ReactNode {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium text-[var(--bg-accent)] underline underline-offset-2 hover:brightness-90"
+        className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
         onClick={(e) => e.stopPropagation()}
       >
         {href}
